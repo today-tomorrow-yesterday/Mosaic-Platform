@@ -1,2 +1,6 @@
 export { Button } from "./components/Button"
 export { Card, CardHeader, CardTitle, CardContent } from "./components/Card"
+export { AppHeader } from "./components/AppHeader"
+export { StatCard } from "./components/StatCard"
+export { Badge } from "./components/Badge"
+export { ProgressBar } from "./components/ProgressBar"

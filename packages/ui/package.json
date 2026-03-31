@@ -15,5 +15,8 @@
   },
   "peerDependencies": {
     "react": "^19.0.0"
+  },
+  "dependencies": {
+    "lucide-react": "^1.7.0"
   }
 }
