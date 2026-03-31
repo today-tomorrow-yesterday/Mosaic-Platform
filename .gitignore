@@ -21,9 +21,10 @@ dist
 .terraform.lock.hcl
 
 # Convex
-convex/_generated
+**/convex/_generated
 
 # Misc
 .DS_Store
 *.pem
 .vercel
+.claude/
