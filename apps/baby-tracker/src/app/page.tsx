@@ -30,7 +30,7 @@ export default function BabyPage() {
 
         {/* Stat Cards */}
         <div className="grid grid-cols-3 gap-4">
-          <StatCard label="Age" value="4 mo" accent="pink" />
+          <StatCard label="Age" value="4 mo" accent="orange" />
           <StatCard label="Milestones" value="3 / 5" accent="green" />
           <StatCard label="Today's Feeds" value={3} accent="blue" />
         </div>
