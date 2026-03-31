@@ -3,8 +3,7 @@
   "private": true,
   "scripts": {
     "build": "turbo build",
-    "dev": "turbo dev --filter=@mosaic/platform",
-    "dev:all": "turbo dev",
+    "dev": "turbo dev",
     "dev:budget": "turbo dev --filter=@mosaic/budget",
     "dev:calendar": "turbo dev --filter=@mosaic/calendar",
     "dev:baby-tracker": "turbo dev --filter=@mosaic/baby-tracker",
