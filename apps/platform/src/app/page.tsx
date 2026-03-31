@@ -47,7 +47,7 @@ export default async function DashboardPage() {
 
           {/* Home — wide */}
           <a
-            href="https://home.atlas-homevault.com"
+            href={process.env.NEXT_PUBLIC_HOME_URL ?? "https://home.atlas-homevault.com"}
             className="group col-span-2 rounded-3xl overflow-hidden bg-white border border-zinc-200 hover:border-orange-200 hover:shadow-xl hover:shadow-orange-100 transition-all duration-300 flex flex-col"
           >
             <div className="flex-1 relative overflow-hidden">
@@ -74,7 +74,7 @@ export default async function DashboardPage() {
 
           {/* Calendar — tall */}
           <a
-            href="https://calendar.atlas-homevault.com"
+            href={process.env.NEXT_PUBLIC_CALENDAR_URL ?? "https://calendar.atlas-homevault.com"}
             className="group row-span-2 rounded-3xl overflow-hidden bg-white border border-zinc-200 hover:border-blue-200 hover:shadow-xl hover:shadow-blue-100 transition-all duration-300 flex flex-col"
           >
             <div className="flex-1 relative overflow-hidden flex flex-col">
@@ -104,7 +104,7 @@ export default async function DashboardPage() {
 
           {/* Budget */}
           <a
-            href="https://budget.atlas-homevault.com"
+            href={process.env.NEXT_PUBLIC_BUDGET_URL ?? "https://budget.atlas-homevault.com"}
             className="group rounded-3xl overflow-hidden bg-white border border-zinc-200 hover:border-emerald-200 hover:shadow-xl hover:shadow-emerald-100 transition-all duration-300 flex flex-col"
           >
             <div className="flex-1 relative overflow-hidden">
@@ -131,7 +131,7 @@ export default async function DashboardPage() {
 
           {/* Baby */}
           <a
-            href="https://baby.atlas-homevault.com"
+            href={process.env.NEXT_PUBLIC_BABY_URL ?? "https://baby.atlas-homevault.com"}
             className="group rounded-3xl overflow-hidden bg-white border border-zinc-200 hover:border-pink-200 hover:shadow-xl hover:shadow-pink-100 transition-all duration-300 flex flex-col"
           >
             <div className="flex-1 relative overflow-hidden">
