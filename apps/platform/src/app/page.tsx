@@ -9,151 +9,289 @@ function getGreeting() {
   return "Good evening"
 }
 
+function getDateString() {
+  return new Date().toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  })
+}
+
 export default async function DashboardPage() {
   const user = await currentUser()
   const firstName = user?.firstName ?? "there"
 
   return (
-    <div className="min-h-screen bg-[#f4f4f5]">
+    <div className="min-h-screen bg-[var(--s-bg)] relative overflow-x-hidden">
+
+      {/* Ambient background glows — colors from season CSS vars */}
+      <div className="fixed top-[-25vh] right-[-12vw] w-[65vw] h-[65vw] rounded-full bg-[var(--s-glow-a)] blur-[100px] pointer-events-none" />
+      <div className="fixed bottom-[-30vh] left-[-12vw] w-[55vw] h-[55vw] rounded-full bg-[var(--s-glow-b)] blur-[100px] pointer-events-none" />
+      <div className="fixed top-[40vh] left-[30vw] w-[30vw] h-[30vw] rounded-full bg-[var(--s-glow-c)] blur-[80px] pointer-events-none" />
 
       {/* Nav */}
-      <header className="flex items-center justify-between px-8 pt-8 max-w-6xl mx-auto">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-zinc-900 flex items-center justify-center">
-            <span className="text-white text-[11px] font-black tracking-tighter">M</span>
+      <header
+        className="relative flex items-center justify-between px-10 pt-8 max-w-[1100px] mx-auto animate-fade-in"
+        style={{ animationDelay: "0ms" }}
+      >
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 flex items-center justify-center rounded-[10px] bg-[var(--s-logo-bg)]">
+            <span className="font-display italic font-light text-base leading-none tracking-[-0.01em] text-[var(--s-logo-text)]">
+              M
+            </span>
           </div>
-          <span className="font-semibold text-[15px] text-zinc-800 tracking-tight">Mosaic</span>
+          <span className="font-body text-[14px] font-semibold tracking-tight text-[var(--s-text-primary)]">
+            Mosaic
+          </span>
         </div>
-        <UserButton appearance={{ elements: { avatarBox: "w-8 h-8" } }} />
+
+        <div className="flex items-center gap-4">
+          <span className="font-body text-[12px] text-zinc-400 tabular-nums">
+            {getDateString()}
+          </span>
+          <UserButton appearance={{ elements: { avatarBox: "w-8 h-8" } }} />
+        </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-8 pt-14 pb-12">
+      <main className="relative max-w-[1100px] mx-auto px-10 pt-12 pb-16">
 
         {/* Greeting */}
-        <div className="mb-10">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 mb-3">
-            {getGreeting()}
-          </p>
-          <h1 className="text-[60px] font-black tracking-[-0.04em] leading-none text-zinc-900">
-            {firstName}.
+        <div className="mb-12">
+          <div
+            className="flex items-center gap-3 mb-5 animate-fade-up"
+            style={{ animationDelay: "80ms" }}
+          >
+            <div className="w-7 h-px bg-[var(--s-accent)]" />
+            <span
+              className="font-body text-[11px] font-medium uppercase text-zinc-400"
+              style={{ letterSpacing: "0.22em" }}
+            >
+              {getGreeting()}
+            </span>
+          </div>
+
+          <h1
+            className="font-display italic font-light animate-fade-up text-[var(--s-text-primary)]"
+            style={{
+              fontSize: "clamp(64px, 8.5vw, 104px)",
+              lineHeight: 0.93,
+              letterSpacing: "-0.028em",
+              animationDelay: "140ms",
+            }}
+          >
+            {firstName}
+            <span className="text-[var(--s-accent)]">.</span>
           </h1>
-          <p className="mt-3 text-[15px] text-zinc-400">
-            Everything in one place.
+
+          <p
+            className="font-body text-[15px] text-zinc-500 mt-5 animate-fade-up"
+            style={{ letterSpacing: "0.01em", animationDelay: "220ms" }}
+          >
+            Your world, at a glance.
           </p>
         </div>
 
         {/* Bento grid */}
-        <div className="grid grid-cols-3 gap-3" style={{ gridTemplateRows: "260px 260px" }}>
+        <div
+          className="grid grid-cols-3 gap-3.5"
+          style={{ gridTemplateRows: "284px 284px" }}
+        >
 
           {/* Home — wide */}
           <a
             href={process.env.NEXT_PUBLIC_HOME_URL ?? "https://home.atlas-homevault.com"}
-            className="group col-span-2 rounded-3xl overflow-hidden bg-white border border-zinc-200 hover:border-orange-200 hover:shadow-xl hover:shadow-orange-100 transition-all duration-300 flex flex-col"
+            className="group col-span-2 rounded-[24px] overflow-hidden border flex flex-col transition-all duration-300 hover:shadow-2xl animate-fade-up"
+            style={{
+              background: "#fffbf5",
+              borderColor: "#ede7da",
+              animationDelay: "300ms",
+            }}
           >
-            <div className="flex-1 relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-orange-50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="absolute bottom-0 right-0 w-56 h-56 bg-orange-100 rounded-full blur-3xl opacity-0 group-hover:opacity-60 transition-opacity duration-500" />
-              <div className="relative p-7 h-full flex flex-col justify-between">
-                <div className="w-12 h-12 rounded-2xl bg-orange-50 border border-orange-100 flex items-center justify-center group-hover:bg-orange-100 group-hover:border-orange-200 transition-colors duration-300">
-                  <Home className="w-6 h-6 text-orange-500" strokeWidth={1.5} />
+            <div className="flex-1 relative overflow-hidden p-7">
+              <div
+                className="absolute top-0 right-0 pointer-events-none"
+                style={{ width: 160, height: 160, overflow: "hidden", borderRadius: "0 24px 0 0" }}
+              >
+                <div
+                  className="absolute rounded-full transition-all duration-500 group-hover:scale-110"
+                  style={{ top: -55, right: -55, width: 190, height: 190, border: "22px solid #fed7aa", opacity: 0.45, transformOrigin: "center" }}
+                />
+                <div
+                  className="absolute rounded-full transition-all duration-700 group-hover:scale-110"
+                  style={{ top: -30, right: -30, width: 120, height: 120, border: "12px solid #fdba74", opacity: 0.25, transformOrigin: "center" }}
+                />
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-br from-orange-50/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="relative h-full flex flex-col justify-between">
+                <div
+                  className="w-11 h-11 flex items-center justify-center transition-colors duration-300 group-hover:bg-orange-100"
+                  style={{ borderRadius: "13px", background: "#fff0e6", border: "1px solid #fed7aa" }}
+                >
+                  <Home className="w-5 h-5 text-orange-500" strokeWidth={1.5} />
                 </div>
-                <div className="flex items-end justify-between">
+                <div className="flex items-end justify-between gap-4">
                   <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-zinc-400 mb-2">Smart Home</p>
-                    <h2 className="text-3xl font-bold text-zinc-900 tracking-tight">Home</h2>
-                    <p className="text-sm text-zinc-400 mt-1.5 max-w-xs">Control devices, automations, and monitor every corner of your home.</p>
+                    <p className="font-body text-[10px] font-semibold uppercase text-zinc-400 mb-2" style={{ letterSpacing: "0.2em" }}>
+                      Smart Home
+                    </p>
+                    <h2 className="font-display text-[#1a1208] leading-none" style={{ fontWeight: 500, fontSize: "38px", letterSpacing: "-0.02em" }}>
+                      Home
+                    </h2>
+                    <p className="font-body text-[13px] text-zinc-500 mt-2 leading-relaxed" style={{ maxWidth: 268 }}>
+                      Control devices, automations, and monitor every corner of your home.
+                    </p>
                   </div>
-                  <div className="w-9 h-9 rounded-full bg-zinc-100 flex items-center justify-center group-hover:bg-orange-500 transition-colors duration-300 mb-1">
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 mb-1 transition-colors duration-300 group-hover:bg-orange-500"
+                    style={{ background: "#f0ece4" }}
+                  >
                     <ArrowUpRight className="w-4 h-4 text-zinc-400 group-hover:text-white transition-colors duration-300" />
                   </div>
                 </div>
               </div>
             </div>
-            <div className="h-[3px] bg-gradient-to-r from-orange-300/0 via-orange-400 to-orange-300/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="h-[2px] bg-gradient-to-r from-orange-300/0 via-orange-400 to-orange-300/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           </a>
 
           {/* Calendar — tall */}
           <a
             href={process.env.NEXT_PUBLIC_CALENDAR_URL ?? "https://calendar.atlas-homevault.com"}
-            className="group row-span-2 rounded-3xl overflow-hidden bg-white border border-zinc-200 hover:border-blue-200 hover:shadow-xl hover:shadow-blue-100 transition-all duration-300 flex flex-col"
+            className="group row-span-2 rounded-[24px] overflow-hidden border flex flex-col transition-all duration-300 hover:shadow-2xl animate-fade-up"
+            style={{ background: "#f5f7ff", borderColor: "#dde3f5", animationDelay: "360ms" }}
           >
-            <div className="flex-1 relative overflow-hidden flex flex-col">
-              <div className="absolute inset-0 bg-gradient-to-b from-blue-50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="absolute top-0 right-0 w-48 h-48 bg-blue-100 rounded-full blur-3xl opacity-0 group-hover:opacity-60 transition-opacity duration-500" />
-              <div className="relative p-7 flex flex-col h-full">
-                <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center group-hover:bg-blue-100 group-hover:border-blue-200 transition-colors duration-300">
-                  <CalendarDays className="w-6 h-6 text-blue-500" strokeWidth={1.5} />
+            <div className="flex-1 relative overflow-hidden flex flex-col p-7">
+              <div className="absolute top-5 right-5 pointer-events-none">
+                <div className="grid gap-[7px] transition-opacity duration-300" style={{ gridTemplateColumns: "repeat(5, 1fr)", opacity: 0.18 }}>
+                  {Array.from({ length: 25 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="w-[5px] h-[5px] rounded-full bg-blue-400 group-hover:opacity-100 transition-opacity duration-300"
+                      style={{ opacity: i % 3 === 0 ? 0.8 : 0.4 }}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-b from-blue-50/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="relative flex flex-col h-full">
+                <div
+                  className="w-11 h-11 flex items-center justify-center transition-colors duration-300 group-hover:bg-blue-100"
+                  style={{ borderRadius: "13px", background: "#eef1ff", border: "1px solid #c7d2fe" }}
+                >
+                  <CalendarDays className="w-5 h-5 text-blue-500" strokeWidth={1.5} />
                 </div>
                 <div className="mt-auto">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-zinc-400 mb-2">Family Schedule</p>
-                  <h2 className="text-3xl font-bold text-zinc-900 tracking-tight">Calendar</h2>
-                  <p className="text-sm text-zinc-400 mt-1.5">Coordinate appointments, events, and routines across the whole family.</p>
+                  <p className="font-body text-[10px] font-semibold uppercase text-zinc-400 mb-2" style={{ letterSpacing: "0.2em" }}>
+                    Family Schedule
+                  </p>
+                  <h2 className="font-display text-[#1a1208] leading-none" style={{ fontWeight: 500, fontSize: "38px", letterSpacing: "-0.02em" }}>
+                    Calendar
+                  </h2>
+                  <p className="font-body text-[13px] text-zinc-500 mt-2 leading-relaxed">
+                    Coordinate appointments, events, and routines across the whole family.
+                  </p>
                   <div className="flex items-center justify-between mt-6">
-                    <span className="text-[11px] font-medium text-blue-500 bg-blue-50 border border-blue-100 rounded-full px-3 py-1">
+                    <span className="font-body text-[10px] font-medium text-blue-500 bg-blue-50 rounded-full px-3 py-1" style={{ border: "1px solid #bfdbfe" }}>
                       Coming soon
                     </span>
-                    <div className="w-9 h-9 rounded-full bg-zinc-100 flex items-center justify-center group-hover:bg-blue-500 transition-colors duration-300">
+                    <div
+                      className="w-10 h-10 rounded-full flex items-center justify-center transition-colors duration-300 group-hover:bg-blue-500"
+                      style={{ background: "#eef1ff" }}
+                    >
                       <ArrowUpRight className="w-4 h-4 text-zinc-400 group-hover:text-white transition-colors duration-300" />
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-            <div className="h-[3px] bg-gradient-to-r from-blue-300/0 via-blue-400 to-blue-300/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="h-[2px] bg-gradient-to-r from-blue-300/0 via-blue-400 to-blue-300/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           </a>
 
           {/* Budget */}
           <a
             href={process.env.NEXT_PUBLIC_BUDGET_URL ?? "https://budget.atlas-homevault.com"}
-            className="group rounded-3xl overflow-hidden bg-white border border-zinc-200 hover:border-emerald-200 hover:shadow-xl hover:shadow-emerald-100 transition-all duration-300 flex flex-col"
+            className="group rounded-[24px] overflow-hidden border flex flex-col transition-all duration-300 hover:shadow-2xl animate-fade-up"
+            style={{ background: "#f3fbf6", borderColor: "#d5edd8", animationDelay: "400ms" }}
           >
-            <div className="flex-1 relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-tr from-emerald-50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="absolute bottom-0 left-0 w-40 h-40 bg-emerald-100 rounded-full blur-3xl opacity-0 group-hover:opacity-60 transition-opacity duration-500" />
-              <div className="relative p-7 h-full flex flex-col justify-between">
-                <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center group-hover:bg-emerald-100 group-hover:border-emerald-200 transition-colors duration-300">
-                  <Wallet className="w-6 h-6 text-emerald-500" strokeWidth={1.5} />
+            <div className="flex-1 relative overflow-hidden p-7">
+              <div className="absolute bottom-6 right-6 flex items-end gap-[5px] pointer-events-none transition-opacity duration-300 group-hover:opacity-50" style={{ opacity: 0.18 }}>
+                {[28, 44, 34, 52, 40, 48, 36].map((h, i) => (
+                  <div key={i} className="w-[7px] rounded-sm bg-emerald-500" style={{ height: h }} />
+                ))}
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-tr from-emerald-50/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="relative h-full flex flex-col justify-between">
+                <div
+                  className="w-11 h-11 flex items-center justify-center transition-colors duration-300 group-hover:bg-emerald-100"
+                  style={{ borderRadius: "13px", background: "#edf8f1", border: "1px solid #a7f3d0" }}
+                >
+                  <Wallet className="w-5 h-5 text-emerald-500" strokeWidth={1.5} />
                 </div>
-                <div className="flex items-end justify-between">
+                <div className="flex items-end justify-between gap-4">
                   <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-zinc-400 mb-2">Financial</p>
-                    <h2 className="text-3xl font-bold text-zinc-900 tracking-tight">Budget</h2>
-                    <p className="text-sm text-zinc-400 mt-1.5">Track spending and forecast savings.</p>
+                    <p className="font-body text-[10px] font-semibold uppercase text-zinc-400 mb-2" style={{ letterSpacing: "0.2em" }}>
+                      Financial
+                    </p>
+                    <h2 className="font-display text-[#1a1208] leading-none" style={{ fontWeight: 500, fontSize: "38px", letterSpacing: "-0.02em" }}>
+                      Budget
+                    </h2>
+                    <p className="font-body text-[13px] text-zinc-500 mt-2 leading-relaxed">
+                      Track spending and forecast savings.
+                    </p>
                   </div>
-                  <div className="w-9 h-9 rounded-full bg-zinc-100 flex items-center justify-center group-hover:bg-emerald-500 transition-colors duration-300 mb-1">
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 mb-1 transition-colors duration-300 group-hover:bg-emerald-500"
+                    style={{ background: "#e2f5e8" }}
+                  >
                     <ArrowUpRight className="w-4 h-4 text-zinc-400 group-hover:text-white transition-colors duration-300" />
                   </div>
                 </div>
               </div>
             </div>
-            <div className="h-[3px] bg-gradient-to-r from-emerald-300/0 via-emerald-400 to-emerald-300/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="h-[2px] bg-gradient-to-r from-emerald-300/0 via-emerald-400 to-emerald-300/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           </a>
 
           {/* Baby */}
           <a
             href={process.env.NEXT_PUBLIC_BABY_URL ?? "https://baby.atlas-homevault.com"}
-            className="group rounded-3xl overflow-hidden bg-white border border-zinc-200 hover:border-pink-200 hover:shadow-xl hover:shadow-pink-100 transition-all duration-300 flex flex-col"
+            className="group rounded-[24px] overflow-hidden border flex flex-col transition-all duration-300 hover:shadow-2xl animate-fade-up"
+            style={{ background: "#fff7fb", borderColor: "#f0d8e8", animationDelay: "440ms" }}
           >
-            <div className="flex-1 relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-tl from-pink-50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="absolute bottom-0 right-0 w-40 h-40 bg-pink-100 rounded-full blur-3xl opacity-0 group-hover:opacity-60 transition-opacity duration-500" />
-              <div className="relative p-7 h-full flex flex-col justify-between">
-                <div className="w-12 h-12 rounded-2xl bg-pink-50 border border-pink-100 flex items-center justify-center group-hover:bg-pink-100 group-hover:border-pink-200 transition-colors duration-300">
-                  <Baby className="w-6 h-6 text-pink-500" strokeWidth={1.5} />
+            <div className="flex-1 relative overflow-hidden p-7">
+              <div className="absolute top-4 right-4 pointer-events-none">
+                <div className="w-14 h-14 rounded-full bg-pink-200/50 transition-colors duration-300 group-hover:bg-pink-200/70" />
+                <div className="w-7 h-7 rounded-full bg-pink-300/30 transition-colors duration-300 group-hover:bg-pink-300/50" style={{ marginLeft: 36, marginTop: -10 }} />
+                <div className="w-9 h-9 rounded-full bg-pink-200/35 transition-colors duration-300 group-hover:bg-pink-200/55" style={{ marginLeft: 16, marginTop: -6 }} />
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-tl from-pink-50/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="relative h-full flex flex-col justify-between">
+                <div
+                  className="w-11 h-11 flex items-center justify-center transition-colors duration-300 group-hover:bg-pink-100"
+                  style={{ borderRadius: "13px", background: "#fff0f7", border: "1px solid #fbcfe8" }}
+                >
+                  <Baby className="w-5 h-5 text-pink-500" strokeWidth={1.5} />
                 </div>
-                <div className="flex items-end justify-between">
+                <div className="flex items-end justify-between gap-4">
                   <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-zinc-400 mb-2">Milestones</p>
-                    <h2 className="text-3xl font-bold text-zinc-900 tracking-tight">Baby</h2>
-                    <p className="text-sm text-zinc-400 mt-1.5">Track growth and milestones ages 0–5.</p>
+                    <p className="font-body text-[10px] font-semibold uppercase text-zinc-400 mb-2" style={{ letterSpacing: "0.2em" }}>
+                      Milestones
+                    </p>
+                    <h2 className="font-display text-[#1a1208] leading-none" style={{ fontWeight: 500, fontSize: "38px", letterSpacing: "-0.02em" }}>
+                      Baby
+                    </h2>
+                    <p className="font-body text-[13px] text-zinc-500 mt-2 leading-relaxed">
+                      Track growth and milestones ages 0–5.
+                    </p>
                   </div>
-                  <div className="w-9 h-9 rounded-full bg-zinc-100 flex items-center justify-center group-hover:bg-pink-500 transition-colors duration-300 mb-1">
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 mb-1 transition-colors duration-300 group-hover:bg-pink-500"
+                    style={{ background: "#fce8f3" }}
+                  >
                     <ArrowUpRight className="w-4 h-4 text-zinc-400 group-hover:text-white transition-colors duration-300" />
                   </div>
                 </div>
               </div>
             </div>
-            <div className="h-[3px] bg-gradient-to-r from-pink-300/0 via-pink-400 to-pink-300/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="h-[2px] bg-gradient-to-r from-pink-300/0 via-pink-400 to-pink-300/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           </a>
 
         </div>
