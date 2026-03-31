@@ -6,5 +6,9 @@
     "./tailwind": "./tailwind/index.ts",
     "./typescript/base": "./typescript/base.json",
     "./typescript/nextjs": "./typescript/nextjs.json"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.0.0"
   }
 }

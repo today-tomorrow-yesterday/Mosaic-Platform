@@ -37,7 +37,7 @@ export class DbSet<T extends object> {
   }
 
   async insert(data: Omit<T, "_id" | "_creationTime">): Promise<T> {
-    return this.translator.executeInsert<T>(this.table, data as Omit<T, "_id">)
+    return this.translator.executeInsert<T>(this.table, data)
   }
 
   async upsert(data: T, options: UpsertOptions): Promise<void> {

@@ -1,15 +1,15 @@
-import type { GenericDatabaseReader, GenericDatabaseWriter } from "convex/server"
-import type { DataModel } from "../_generated/dataModel"
+import type { GenericDatabaseReader, GenericDatabaseWriter, GenericDataModel } from "convex/server"
 import type { ITranslator, UpsertOptions, IQueryable } from "@mosaic/db"
 
-type Db = GenericDatabaseReader<DataModel> | GenericDatabaseWriter<DataModel>
+type Reader = GenericDatabaseReader<GenericDataModel>
+type Writer = GenericDatabaseWriter<GenericDataModel>
 
 /**
  * ConvexTranslator — the ONLY place ctx.db appears in the platform app.
  * Inject per-function: new ConvexTranslator(ctx.db)
  */
 export class ConvexTranslator implements ITranslator {
-  constructor(private readonly db: Db) {}
+  constructor(private readonly db: Reader | Writer) {}
 
   private buildFilter<T>(q: any, state: IQueryable<T>): any {
     const clauses: any[] = []
@@ -51,7 +51,7 @@ export class ConvexTranslator implements ITranslator {
   }
 
   async executeSelect<T>(state: IQueryable<T>): Promise<T[]> {
-    const reader = this.db as GenericDatabaseReader<DataModel>
+    const reader = this.db as Reader
     let query = reader.query(state.table as any).filter((q) => {
       const condition = this.buildFilter(q, state)
       return condition ?? true
@@ -62,7 +62,7 @@ export class ConvexTranslator implements ITranslator {
   }
 
   async executeSelectFirst<T>(state: IQueryable<T>): Promise<T | null> {
-    const reader = this.db as GenericDatabaseReader<DataModel>
+    const reader = this.db as Reader
     return await reader.query(state.table as any).filter((q) => {
       const condition = this.buildFilter(q, state)
       return condition ?? true
@@ -77,14 +77,14 @@ export class ConvexTranslator implements ITranslator {
     return (await this.executeSelectFirst(state)) !== null
   }
 
-  async executeInsert<T>(table: string, data: Omit<T, "_id">): Promise<T> {
-    const writer = this.db as GenericDatabaseWriter<DataModel>
+  async executeInsert<T>(table: string, data: Omit<T, "_id" | "_creationTime">): Promise<T> {
+    const writer = this.db as Writer
     const id = await writer.insert(table as any, data as any)
     return { ...data, _id: id } as unknown as T
   }
 
   async executeUpdate<T>(state: IQueryable<T>): Promise<void> {
-    const writer = this.db as GenericDatabaseWriter<DataModel>
+    const writer = this.db as Writer
     const records = await this.executeSelect(state)
     await Promise.all(records.map((r) => writer.patch((r as any)._id, state.data as any)))
   }
@@ -95,19 +95,19 @@ export class ConvexTranslator implements ITranslator {
   }
 
   async executeDelete<T>(state: IQueryable<T>): Promise<void> {
-    const writer = this.db as GenericDatabaseWriter<DataModel>
+    const writer = this.db as Writer
     const records = await this.executeSelect(state)
     await Promise.all(records.map((r) => writer.delete((r as any)._id)))
   }
 
   async executeUpsert<T>(table: string, data: T, options: UpsertOptions): Promise<void> {
-    const reader = this.db as GenericDatabaseReader<DataModel>
-    const writer = this.db as GenericDatabaseWriter<DataModel>
+    const reader = this.db as Reader
+    const writer = this.db as Writer
     const existing = await reader.query(table as any)
       .filter((q) => q.eq(q.field(options.onConflict), (data as any)[options.onConflict]))
       .first()
-    if (existing) {
-      await writer.patch(existing._id, data as any)
+    if (existing?._id) {
+      await writer.patch(existing._id as any, data as any)
     } else {
       await writer.insert(table as any, data as any)
     }

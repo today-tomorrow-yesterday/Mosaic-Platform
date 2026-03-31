@@ -61,7 +61,14 @@ importers:
         specifier: ^5.0.0
         version: 5.9.3
 
-  packages/config: {}
+  packages/config:
+    devDependencies:
+      tailwindcss:
+        specifier: ^3.4.0
+        version: 3.4.19
+      typescript:
+        specifier: ^5.0.0
+        version: 5.9.3
 
   packages/db:
     devDependencies:
@@ -71,6 +78,15 @@ importers:
 
   packages/ui:
     devDependencies:
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.0.0
+        version: 19.2.3(@types/react@19.2.14)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.4
       typescript:
         specifier: ^5.0.0
         version: 5.9.3

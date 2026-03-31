@@ -40,7 +40,7 @@ export abstract class BaseRepository<T extends object> {
   }
 
   async insert(data: Omit<T, "_id" | "_creationTime">): Promise<T> {
-    return this.db.insert(data as Omit<T, "_id">)
+    return this.db.insert(data)
   }
 
   async update(id: string, data: Partial<T>): Promise<void> {

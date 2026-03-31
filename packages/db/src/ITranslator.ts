@@ -9,7 +9,7 @@ export interface ITranslator {
   executeSelectFirst<T>(query: IQueryable<T>): Promise<T | null>
   executeCount<T>(query: IQueryable<T>): Promise<number>
   executeExists<T>(query: IQueryable<T>): Promise<boolean>
-  executeInsert<T>(table: string, data: Omit<T, "_id">): Promise<T>
+  executeInsert<T>(table: string, data: Omit<T, "_id" | "_creationTime">): Promise<T>
   executeUpdate<T>(query: IQueryable<T>): Promise<void>
   executeUpdateReturning<T>(query: IQueryable<T>): Promise<T[]>
   executeDelete<T>(query: IQueryable<T>): Promise<void>
