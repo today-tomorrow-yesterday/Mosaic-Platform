@@ -1,0 +1,29 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Build outputs
+.next
+dist
+.turbo
+
+# Env files
+.env
+.env.local
+.env*.local
+*.tfvars
+
+# Terraform
+.terraform
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+
+# Convex
+convex/_generated
+
+# Misc
+.DS_Store
+*.pem
+.vercel
