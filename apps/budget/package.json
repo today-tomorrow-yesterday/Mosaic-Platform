@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "next build",
-    "dev": "concurrently \"npx convex dev\" \"next dev --port 3001\"",
+    "dev": "next dev --port 3001",
     "dev:next": "next dev --port 3001",
     "dev:convex": "npx convex dev",
     "lint": "next lint",
