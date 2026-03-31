@@ -26,7 +26,7 @@ const categoryBadgeVariant: Record<string, "default" | "green" | "blue" | "orang
 export default function BudgetPage() {
   return (
     <div className="min-h-screen bg-[#f4f4f5]">
-      <AppHeader name="Budget" actions={<UserButton />} />
+      <AppHeader name="Budget" actions={<UserButton />} backHref={process.env.NEXT_PUBLIC_PLATFORM_URL ?? "https://atlas-homevault.com"} />
 
       <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
 

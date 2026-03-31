@@ -19,7 +19,7 @@ const devices = [
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-[#f4f4f5]">
-      <AppHeader name="Home" actions={<UserButton />} />
+      <AppHeader name="Home" actions={<UserButton />} backHref={process.env.NEXT_PUBLIC_PLATFORM_URL ?? "https://atlas-homevault.com"} />
 
       <main className="max-w-5xl mx-auto px-6 py-8 space-y-8">
         {/* Stat Cards */}
