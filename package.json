@@ -8,6 +8,9 @@
     "typecheck": "turbo typecheck",
     "format": "prettier --write \"**/*.{ts,tsx,md}\""
   },
+  "dependencies": {
+    "convex": "^1.17.0"
+  },
   "devDependencies": {
     "prettier": "^3.0.0",
     "turbo": "^2.0.0",
