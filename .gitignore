@@ -27,4 +27,8 @@ dist
 .DS_Store
 *.pem
 .vercel
-.claude/
+# Claude Code — ignore personal session files, track rules and knowledge
+.claude/settings.local.json
+.claude/handoff.md
+.claude/instincts.md
+.claude/learning-log.md
