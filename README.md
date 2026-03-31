@@ -87,6 +87,35 @@ Swapping Convex for another database means rewriting only `ConvexTranslator`.
    pnpm dev
    ```
 
+### Dev Workflow
+
+Run a single app from the repo root:
+
+| Command | App | Port |
+|---|---|---|
+| `pnpm dev` | Platform | 3000 |
+| `pnpm dev:budget` | Budget | 3001 |
+| `pnpm dev:calendar` | Calendar | 3002 |
+| `pnpm dev:baby-tracker` | Baby Tracker | 3003 |
+| `pnpm dev:home` | Home | 3004 |
+| `pnpm dev:all` | All apps | — |
+
+Or run from inside an app directory:
+```bash
+cd apps/budget
+pnpm dev
+```
+
+> Each app runs its own Convex watcher alongside Next.js. Run `npx convex dev` once per app directory the first time to link it to a Convex project.
+
+### Linking a New App to Convex
+
+Each app needs its own Convex project (for isolation). One-time setup per app:
+
+1. Create a new project at [dashboard.convex.dev](https://dashboard.convex.dev)
+2. From the app directory, run `npx convex dev` — it will prompt you to link the project and write `CONVEX_DEPLOYMENT` to `.env.local`
+3. Set `CLERK_ISSUER_URL` in the Convex dashboard under **Settings → Environment Variables**
+
 ### Environment Variables (per app)
 
 ```env
