@@ -3,6 +3,7 @@ import { cookies } from "next/headers"
 import { Home, CalendarDays, Wallet, Baby, ArrowUpRight } from "lucide-react"
 import { LogoBees } from "@/components/LogoBees"
 import { AvatarMenu } from "@/components/AvatarMenu"
+import { getCurrentSeason } from "@/lib/season"
 import type { SeasonId } from "@/lib/season"
 
 function getGreeting() {
@@ -25,6 +26,7 @@ export default async function DashboardPage() {
   const firstName = user?.firstName ?? "there"
   const seasonOverride = cookieStore.get("mosaic-season")?.value as SeasonId | undefined
   const activeSeason: SeasonId | "auto" = seasonOverride ?? "auto"
+  const resolvedSeason: SeasonId = seasonOverride ?? getCurrentSeason().id
 
   return (
     <div className="min-h-screen bg-[var(--s-bg)] relative overflow-x-hidden">
@@ -39,7 +41,7 @@ export default async function DashboardPage() {
         className="relative z-10 flex items-center justify-between px-10 pt-8 max-w-[1100px] mx-auto animate-fade-in"
         style={{ animationDelay: "0ms" }}
       >
-        <LogoBees />
+        <LogoBees season={resolvedSeason} />
 
         <div className="flex items-center gap-4">
           <span className="font-body text-[12px] text-zinc-400 tabular-nums">
