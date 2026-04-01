@@ -1,7 +1,9 @@
 import { currentUser } from "@clerk/nextjs/server"
-import { UserButton } from "@clerk/nextjs"
+import { cookies } from "next/headers"
 import { Home, CalendarDays, Wallet, Baby, ArrowUpRight } from "lucide-react"
 import { LogoBees } from "@/components/LogoBees"
+import { AvatarMenu } from "@/components/AvatarMenu"
+import type { SeasonId } from "@/lib/season"
 
 function getGreeting() {
   const hour = new Date().getHours()
@@ -19,8 +21,10 @@ function getDateString() {
 }
 
 export default async function DashboardPage() {
-  const user = await currentUser()
+  const [user, cookieStore] = await Promise.all([currentUser(), cookies()])
   const firstName = user?.firstName ?? "there"
+  const seasonOverride = cookieStore.get("mosaic-season")?.value as SeasonId | undefined
+  const activeSeason: SeasonId | "auto" = seasonOverride ?? "auto"
 
   return (
     <div className="min-h-screen bg-[var(--s-bg)] relative overflow-x-hidden">
@@ -41,7 +45,7 @@ export default async function DashboardPage() {
           <span className="font-body text-[12px] text-zinc-400 tabular-nums">
             {getDateString()}
           </span>
-          <UserButton appearance={{ elements: { avatarBox: "w-8 h-8" } }} />
+          <AvatarMenu activeSeason={activeSeason} />
         </div>
       </header>
 

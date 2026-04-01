@@ -88,6 +88,11 @@ const themes: Record<SeasonId, SeasonTheme> = {
   },
 }
 
+export function getSeasonById(id: string | undefined): SeasonTheme {
+  if (id && id in themes) return themes[id as SeasonId]
+  return getCurrentSeason()
+}
+
 export function getCurrentSeason(): SeasonTheme {
   const now = new Date()
   const month = now.getMonth() + 1 // 1–12

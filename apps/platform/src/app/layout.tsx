@@ -2,7 +2,8 @@ import type { Metadata } from "next"
 import { ClerkProvider } from "@clerk/nextjs"
 import { ConvexClientProvider } from "@/components/ConvexClientProvider"
 import { Fraunces, DM_Sans } from "next/font/google"
-import { getCurrentSeason, getSeasonCssVars } from "@/lib/season"
+import { cookies } from "next/headers"
+import { getSeasonById, getSeasonCssVars } from "@/lib/season"
 import "./globals.css"
 
 const fraunces = Fraunces({
@@ -21,8 +22,10 @@ export const metadata: Metadata = {
   description: "Your personal platform",
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const season = getCurrentSeason()
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const cookieStore = await cookies()
+  const override = cookieStore.get("mosaic-season")?.value
+  const season = getSeasonById(override)
   const seasonVars = getSeasonCssVars(season)
 
   return (
