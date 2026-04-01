@@ -1,10 +1,14 @@
 import type { Metadata } from "next"
 import { ClerkProvider } from "@clerk/nextjs"
 import { ConvexClientProvider } from "@/components/ConvexClientProvider"
-import { Inter } from "next/font/google"
+import { Caveat } from "next/font/google"
 import "./globals.css"
 
-const inter = Inter({ subsets: ["latin"] })
+const caveat = Caveat({
+  subsets: ["latin"],
+  variable: "--font-sketch",
+  weight: ["400", "500", "600", "700"],
+})
 
 export const metadata: Metadata = {
   title: "Calendar | Mosaic",
@@ -13,7 +17,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={inter.className}>
+    <html lang="en" className={caveat.variable}>
       <body>
         <ClerkProvider>
           <ConvexClientProvider>{children}</ConvexClientProvider>

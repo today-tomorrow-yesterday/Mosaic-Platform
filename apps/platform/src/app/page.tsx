@@ -1,6 +1,7 @@
 import { currentUser } from "@clerk/nextjs/server"
 import { UserButton } from "@clerk/nextjs"
 import { Home, CalendarDays, Wallet, Baby, ArrowUpRight } from "lucide-react"
+import { BeeSwarm } from "@/components/BeeSwarm"
 
 function getGreeting() {
   const hour = new Date().getHours()
@@ -23,6 +24,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-[var(--s-bg)] relative overflow-x-hidden">
+      <BeeSwarm />
 
       {/* Ambient background glows — colors from season CSS vars */}
       <div className="fixed top-[-25vh] right-[-12vw] w-[65vw] h-[65vw] rounded-full bg-[var(--s-glow-a)] blur-[100px] pointer-events-none" />
