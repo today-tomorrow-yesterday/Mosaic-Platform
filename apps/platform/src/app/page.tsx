@@ -1,7 +1,7 @@
 import { currentUser } from "@clerk/nextjs/server"
 import { UserButton } from "@clerk/nextjs"
 import { Home, CalendarDays, Wallet, Baby, ArrowUpRight } from "lucide-react"
-import { BeeSwarm } from "@/components/BeeSwarm"
+import { LogoBees } from "@/components/LogoBees"
 
 function getGreeting() {
   const hour = new Date().getHours()
@@ -24,7 +24,6 @@ export default async function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-[var(--s-bg)] relative overflow-x-hidden">
-      <BeeSwarm />
 
       {/* Ambient background glows — colors from season CSS vars */}
       <div className="fixed top-[-25vh] right-[-12vw] w-[65vw] h-[65vw] rounded-full bg-[var(--s-glow-a)] blur-[100px] pointer-events-none" />
@@ -36,16 +35,7 @@ export default async function DashboardPage() {
         className="relative flex items-center justify-between px-10 pt-8 max-w-[1100px] mx-auto animate-fade-in"
         style={{ animationDelay: "0ms" }}
       >
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 flex items-center justify-center rounded-[10px] bg-[var(--s-logo-bg)]">
-            <span className="font-display italic font-light text-base leading-none tracking-[-0.01em] text-[var(--s-logo-text)]">
-              M
-            </span>
-          </div>
-          <span className="font-body text-[14px] font-semibold tracking-tight text-[var(--s-text-primary)]">
-            Mosaic
-          </span>
-        </div>
+        <LogoBees />
 
         <div className="flex items-center gap-4">
           <span className="font-body text-[12px] text-zinc-400 tabular-nums">
