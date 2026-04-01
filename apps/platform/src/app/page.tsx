@@ -36,7 +36,7 @@ export default async function DashboardPage() {
 
       {/* Nav */}
       <header
-        className="relative flex items-center justify-between px-10 pt-8 max-w-[1100px] mx-auto animate-fade-in"
+        className="relative z-10 flex items-center justify-between px-10 pt-8 max-w-[1100px] mx-auto animate-fade-in"
         style={{ animationDelay: "0ms" }}
       >
         <LogoBees />
