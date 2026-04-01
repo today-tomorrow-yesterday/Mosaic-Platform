@@ -1,356 +1,423 @@
 import { UserButton } from "@clerk/nextjs"
 
-type Category = {
-  name: string
-  emoji: string
-  spent: number
-  budget: number
-  pct: number
-}
+/* ─── Data ─────────────────────────────────────────────────────── */
 
-type Transaction = {
-  name: string
-  category: string
-  date: string
-  amount: string
-  negative: boolean
-}
-
-const categories: Category[] = [
+const categories = [
   { emoji: "🏠", name: "Housing",       spent: 1200, budget: 1200, pct: 100 },
   { emoji: "🍔", name: "Food",          spent: 486,  budget: 600,  pct: 81  },
   { emoji: "🚗", name: "Transport",     spent: 210,  budget: 300,  pct: 70  },
   { emoji: "🎮", name: "Entertainment", spent: 89,   budget: 150,  pct: 59  },
 ]
 
-const transactions: Transaction[] = [
-  { name: "Whole Foods",  category: "Food",          date: "Mar 30", amount: "$84.32",  negative: true  },
-  { name: "Netflix",      category: "Entertainment", date: "Mar 29", amount: "$15.99",  negative: true  },
-  { name: "Shell Gas",    category: "Transport",     date: "Mar 28", amount: "$52.10",  negative: true  },
-  { name: "Target",       category: "Shopping",      date: "Mar 27", amount: "$127.43", negative: true  },
-  { name: "Spotify",      category: "Entertainment", date: "Mar 26", amount: "$9.99",   negative: true  },
+const transactions = [
+  { name: "Whole Foods",  category: "Food",          date: "Mar 30", amount: 84.32  },
+  { name: "Netflix",      category: "Entertainment", date: "Mar 29", amount: 15.99  },
+  { name: "Shell Gas",    category: "Transport",     date: "Mar 28", amount: 52.10  },
+  { name: "Target",       category: "Shopping",      date: "Mar 27", amount: 127.43 },
+  { name: "Spotify",      category: "Entertainment", date: "Mar 26", amount: 9.99   },
 ]
 
-function categoryAccent(pct: number) {
-  if (pct >= 100) return { text: "#dc2626", bar: "#dc2626", bg: "#fef2f2", border: "#fecaca" }
-  if (pct >= 80)  return { text: "#d97706", bar: "#f59e0b", bg: "#fffbeb", border: "#fde68a" }
-  return              { text: "#059669", bar: "#10b981", bg: "#f0fdf4", border: "#bbf7d0" }
+/* ─── Helpers ───────────────────────────────────────────────────── */
+
+const BUDGET  = 4000
+const SPENT   = 2847
+const LEFT    = BUDGET - SPENT
+const PCT     = Math.round((SPENT / BUDGET) * 100)
+// 71% → 255.6°
+const RING_DEG = (PCT / 100) * 360
+
+function barColor(pct: number) {
+  if (pct >= 100) return "#f6465d"
+  if (pct >= 80)  return "#f0a500"
+  return "#0052ff"
 }
 
-export default function BudgetPage() {
-  const pctSpent = Math.round((2847 / 4000) * 100)
+function fmt(n: number) {
+  return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
 
+/* ─── Card shell ────────────────────────────────────────────────── */
+
+function Card({
+  children,
+  className = "",
+  style = {},
+}: {
+  children: React.ReactNode
+  className?: string
+  style?: React.CSSProperties
+}) {
   return (
-    <div className="min-h-screen" style={{ background: "#f0f2f5" }}>
+    <div
+      className={className}
+      style={{
+        background: "#ffffff",
+        border: "1px solid #e8ecef",
+        borderRadius: 16,
+        boxShadow: "0 1px 2px rgba(20,23,26,0.06), 0 2px 8px rgba(20,23,26,0.04)",
+        ...style,
+      }}
+    >
+      {children}
+    </div>
+  )
+}
 
-      {/* ── Header ── */}
+/* ─── Page ──────────────────────────────────────────────────────── */
+
+export default function BudgetPage() {
+  return (
+    <div className="min-h-screen" style={{ background: "#f7f8fa" }}>
+
+      {/* ── Sticky header ── */}
       <header
         className="sticky top-0 z-20 animate-fade-in"
         style={{
-          background: "rgba(240,242,245,0.85)",
-          backdropFilter: "blur(16px)",
-          borderBottom: "1px solid #e2e5ea",
-          animationDelay: "0ms",
+          background: "rgba(247,248,250,0.9)",
+          backdropFilter: "blur(12px)",
+          borderBottom: "1px solid #e8ecef",
         }}
       >
-        <div className="max-w-5xl mx-auto px-7 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
+        <div
+          className="max-w-5xl mx-auto flex items-center justify-between"
+          style={{ padding: "0 28px", height: 56 }}
+        >
+          <div className="flex items-center gap-2">
             <a
               href={process.env.NEXT_PUBLIC_PLATFORM_URL ?? "https://atlas-homevault.com"}
-              className="font-body text-[13px] text-zinc-400 hover:text-zinc-700 transition-colors"
+              style={{ fontSize: 13, fontWeight: 500, color: "#5e6e7a" }}
+              className="hover:text-[#14171a] transition-colors"
             >
               ← Mosaic
             </a>
-            <span className="text-zinc-200 select-none">/</span>
-            <span className="font-display font-semibold text-[15px] text-zinc-900 tracking-tight">
-              Budget
-            </span>
+            <span style={{ color: "#d1d8de", margin: "0 4px" }}>/</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: "#14171a" }}>Budget</span>
           </div>
-          <UserButton appearance={{ elements: { avatarBox: "w-8 h-8" } }} />
+          <div className="flex items-center gap-4">
+            <span
+              style={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: "#5e6e7a",
+                background: "#f0f2f5",
+                border: "1px solid #e8ecef",
+                borderRadius: 8,
+                padding: "3px 10px",
+              }}
+            >
+              March 2026
+            </span>
+            <UserButton appearance={{ elements: { avatarBox: "w-8 h-8" } }} />
+          </div>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-7 py-8 space-y-5">
+      <main
+        className="max-w-5xl mx-auto"
+        style={{ padding: "28px 28px 64px" }}
+      >
 
-        {/* ── Hero card ── */}
+        {/* ── Overview row ── */}
         <div
-          className="rounded-3xl overflow-hidden animate-fade-up"
-          style={{
-            background: "#111827",
-            animationDelay: "40ms",
-            boxShadow: "0 20px 60px -12px rgba(17,24,39,0.35)",
-          }}
+          className="grid gap-4 mb-4 animate-fade-up"
+          style={{ gridTemplateColumns: "1fr 1fr 1fr", animationDelay: "40ms" }}
         >
-          {/* Top section: numbers */}
-          <div className="px-8 pt-8 pb-6 grid grid-cols-3 gap-6">
-            {/* Spent */}
+          {/* Spent */}
+          <Card style={{ padding: "20px 24px" }}>
+            <p style={{ fontSize: 11, fontWeight: 600, color: "#5e6e7a", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
+              Spent this month
+            </p>
+            <p style={{ fontSize: 32, fontWeight: 800, color: "#14171a", letterSpacing: "-0.03em", lineHeight: 1 }}>
+              ${SPENT.toLocaleString()}
+            </p>
+          </Card>
+
+          {/* Remaining */}
+          <Card style={{ padding: "20px 24px", border: "1px solid #b7f5d8" }}>
+            <p style={{ fontSize: 11, fontWeight: 600, color: "#00a063", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
+              Remaining
+            </p>
+            <p style={{ fontSize: 32, fontWeight: 800, color: "#00c076", letterSpacing: "-0.03em", lineHeight: 1 }}>
+              ${LEFT.toLocaleString()}
+            </p>
+          </Card>
+
+          {/* Budget */}
+          <Card style={{ padding: "20px 24px" }}>
+            <p style={{ fontSize: 11, fontWeight: 600, color: "#5e6e7a", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
+              Monthly budget
+            </p>
+            <p style={{ fontSize: 32, fontWeight: 800, color: "#14171a", letterSpacing: "-0.03em", lineHeight: 1 }}>
+              ${BUDGET.toLocaleString()}
+            </p>
+          </Card>
+        </div>
+
+        {/* ── Progress card ── */}
+        <Card
+          className="mb-4 animate-fade-up"
+          style={{ padding: "24px 28px", animationDelay: "100ms" }}
+        >
+          <div className="flex items-center justify-between mb-5">
             <div>
-              <p
-                className="font-body font-medium text-zinc-500 mb-2"
-                style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase" }}
-              >
-                Spent
+              <p style={{ fontSize: 13, fontWeight: 600, color: "#14171a" }}>
+                Budget utilization
               </p>
-              <p
-                className="font-display font-bold text-white leading-none"
-                style={{ fontSize: "clamp(36px, 5vw, 52px)", letterSpacing: "-0.03em" }}
-              >
-                $2,847
+              <p style={{ fontSize: 12, color: "#5e6e7a", marginTop: 2 }}>
+                ${SPENT.toLocaleString()} spent of ${BUDGET.toLocaleString()} — {PCT}% used
               </p>
             </div>
 
-            {/* Remaining — hero stat, center */}
-            <div className="text-center">
-              <p
-                className="font-body font-medium mb-2"
-                style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "#6ee7b7" }}
-              >
-                Remaining
-              </p>
-              <p
-                className="font-display font-extrabold leading-none"
-                style={{
-                  fontSize: "clamp(44px, 6.5vw, 68px)",
-                  letterSpacing: "-0.04em",
-                  color: "#34d399",
-                }}
-              >
-                $1,153
-              </p>
-            </div>
-
-            {/* Budget */}
-            <div className="text-right">
-              <p
-                className="font-body font-medium text-zinc-500 mb-2"
-                style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase" }}
-              >
-                Budget
-              </p>
-              <p
-                className="font-display font-bold leading-none"
-                style={{
-                  fontSize: "clamp(36px, 5vw, 52px)",
-                  letterSpacing: "-0.03em",
-                  color: "#374151",
-                }}
-              >
-                $4,000
-              </p>
-            </div>
-          </div>
-
-          {/* Progress bar section */}
-          <div className="px-8 pb-8">
-            <div className="flex items-center justify-between mb-3">
-              <span className="font-body text-[12px] text-zinc-500">March 2026</span>
-              <span
-                className="font-display font-bold text-zinc-300"
-                style={{ fontSize: 22, letterSpacing: "-0.02em" }}
-              >
-                {pctSpent}% used
-              </span>
-            </div>
-
-            {/* Track */}
+            {/* Donut ring */}
             <div
-              className="w-full rounded-full overflow-hidden"
-              style={{ height: 8, background: "#1f2937" }}
+              style={{
+                width: 80,
+                height: 80,
+                borderRadius: "50%",
+                background: `conic-gradient(#0052ff 0deg ${RING_DEG}deg, #e8ecef ${RING_DEG}deg 360deg)`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
             >
-              {/* Gradient fill */}
               <div
-                className="h-full rounded-full"
                 style={{
-                  width: `${pctSpent}%`,
-                  background: "linear-gradient(90deg, #34d399 0%, #f59e0b 70%, #ef4444 100%)",
-                  backgroundSize: `${100 / (pctSpent / 100)}% 100%`,
-                  transition: "width 0.8s cubic-bezier(0.22, 1, 0.36, 1)",
-                }}
-              />
-            </div>
-
-            {/* Tick marks for budget milestones */}
-            <div className="flex justify-between mt-2 px-0.5">
-              {["25%", "50%", "75%", "100%"].map((label) => (
-                <span key={label} className="font-body text-[10px] text-zinc-600">
-                  {label}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* ── Category grid ── */}
-        <div
-          className="animate-fade-up"
-          style={{ animationDelay: "140ms" }}
-        >
-          <p
-            className="font-body font-semibold text-zinc-400 mb-3 px-1"
-            style={{ fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase" }}
-          >
-            Categories
-          </p>
-          <div className="grid grid-cols-2 gap-4">
-            {categories.map((cat, i) => {
-              const accent = categoryAccent(cat.pct)
-              const leftover = cat.budget - cat.spent
-              return (
-                <div
-                  key={cat.name}
-                  className="rounded-2xl p-6 animate-fade-up"
-                  style={{
-                    background: "#ffffff",
-                    border: "1px solid #e8eaed",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04)",
-                    animationDelay: `${180 + i * 50}ms`,
-                  }}
-                >
-                  {/* Top row */}
-                  <div className="flex items-start justify-between mb-5">
-                    <div>
-                      <div
-                        className="w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-3"
-                        style={{ background: accent.bg, border: `1px solid ${accent.border}` }}
-                      >
-                        {cat.emoji}
-                      </div>
-                      <p
-                        className="font-display font-semibold text-zinc-800"
-                        style={{ fontSize: 15, letterSpacing: "-0.01em" }}
-                      >
-                        {cat.name}
-                      </p>
-                      <p className="font-body text-[12px] text-zinc-400 mt-0.5 tabular-nums">
-                        ${cat.spent.toLocaleString()} of ${cat.budget.toLocaleString()}
-                      </p>
-                    </div>
-
-                    {/* Large percentage */}
-                    <div className="text-right">
-                      <p
-                        className="font-display font-extrabold leading-none tabular-nums"
-                        style={{ fontSize: 42, letterSpacing: "-0.04em", color: accent.text }}
-                      >
-                        {cat.pct}%
-                      </p>
-                      <p
-                        className="font-body text-[11px] mt-1 font-medium"
-                        style={{ color: accent.text }}
-                      >
-                        {cat.pct >= 100 ? "over budget" : leftover > 0 ? `$${leftover} left` : "maxed"}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Progress bar */}
-                  <div
-                    className="w-full rounded-full overflow-hidden"
-                    style={{ height: 5, background: "#f3f4f6" }}
-                  >
-                    <div
-                      className="h-full rounded-full"
-                      style={{
-                        width: `${Math.min(cat.pct, 100)}%`,
-                        background: accent.bar,
-                        transition: "width 0.7s cubic-bezier(0.22, 1, 0.36, 1)",
-                      }}
-                    />
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* ── Transactions ── */}
-        <div
-          className="animate-fade-up"
-          style={{ animationDelay: "360ms" }}
-        >
-          <p
-            className="font-body font-semibold text-zinc-400 mb-3 px-1"
-            style={{ fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase" }}
-          >
-            Recent Transactions
-          </p>
-
-          <div
-            className="rounded-2xl overflow-hidden"
-            style={{
-              background: "#ffffff",
-              border: "1px solid #e8eaed",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04)",
-            }}
-          >
-            {transactions.map((tx, i) => (
-              <div
-                key={i}
-                className="group flex items-center justify-between px-6 py-4 hover:bg-zinc-50 transition-colors animate-fade-up"
-                style={{
-                  borderBottom: i < transactions.length - 1 ? "1px solid #f3f4f6" : "none",
-                  animationDelay: `${400 + i * 40}ms`,
+                  width: 56,
+                  height: 56,
+                  borderRadius: "50%",
+                  background: "#ffffff",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               >
-                {/* Left: icon + name */}
-                <div className="flex items-center gap-4 min-w-0">
-                  {/* Initial circle */}
-                  <div
-                    className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                    style={{ background: "#f3f4f6" }}
-                  >
-                    <span className="font-display font-bold text-[13px] text-zinc-500">
-                      {tx.name.charAt(0)}
-                    </span>
-                  </div>
-                  <div className="min-w-0">
-                    <p
-                      className="font-display font-semibold text-zinc-900 truncate"
-                      style={{ fontSize: 14, letterSpacing: "-0.01em" }}
-                    >
-                      {tx.name}
-                    </p>
-                    <p className="font-body text-[12px] text-zinc-400">
-                      {tx.category}
-                    </p>
-                  </div>
-                </div>
+                <span style={{ fontSize: 14, fontWeight: 800, color: "#14171a", lineHeight: 1 }}>
+                  {PCT}%
+                </span>
+              </div>
+            </div>
+          </div>
 
-                {/* Right: date + amount */}
-                <div className="flex items-center gap-5 flex-shrink-0">
-                  <span className="font-body text-[12px] text-zinc-400 tabular-nums hidden sm:block">
-                    {tx.date}
-                  </span>
-                  <span
-                    className="font-display font-bold tabular-nums"
+          {/* Progress track */}
+          <div style={{ height: 6, background: "#f0f2f5", borderRadius: 99, overflow: "hidden" }}>
+            <div
+              style={{
+                height: "100%",
+                width: `${PCT}%`,
+                background: "linear-gradient(90deg, #0052ff, #1a6fff)",
+                borderRadius: 99,
+              }}
+            />
+          </div>
+          <div className="flex justify-between mt-2">
+            <span style={{ fontSize: 11, color: "#a0aab4" }}>$0</span>
+            <span style={{ fontSize: 11, color: "#a0aab4" }}>${BUDGET.toLocaleString()}</span>
+          </div>
+        </Card>
+
+        {/* ── Lower two-col ── */}
+        <div
+          className="grid gap-4"
+          style={{ gridTemplateColumns: "1fr 1.45fr" }}
+        >
+          {/* Categories */}
+          <Card
+            className="animate-fade-up"
+            style={{ animationDelay: "160ms" }}
+          >
+            <div
+              style={{
+                padding: "16px 20px 12px",
+                borderBottom: "1px solid #f0f2f5",
+              }}
+            >
+              <p style={{ fontSize: 13, fontWeight: 700, color: "#14171a" }}>Categories</p>
+            </div>
+
+            <div style={{ padding: "8px 0" }}>
+              {categories.map((cat, i) => {
+                const color   = barColor(cat.pct)
+                const leftover = cat.budget - cat.spent
+                return (
+                  <div
+                    key={cat.name}
+                    className="animate-fade-up"
                     style={{
-                      fontSize: 15,
-                      letterSpacing: "-0.02em",
-                      color: "#111827",
+                      padding: "12px 20px",
+                      borderBottom: i < categories.length - 1 ? "1px solid #f7f8fa" : "none",
+                      animationDelay: `${200 + i * 45}ms`,
                     }}
                   >
-                    −${tx.amount}
-                  </span>
-                </div>
-              </div>
-            ))}
+                    {/* Name row */}
+                    <div className="flex items-center justify-between mb-2.5">
+                      <div className="flex items-center gap-2.5">
+                        <span
+                          style={{
+                            fontSize: 16,
+                            width: 30,
+                            height: 30,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            background: "#f7f8fa",
+                            borderRadius: 8,
+                          }}
+                        >
+                          {cat.emoji}
+                        </span>
+                        <div>
+                          <p style={{ fontSize: 13, fontWeight: 600, color: "#14171a", lineHeight: 1 }}>
+                            {cat.name}
+                          </p>
+                          <p style={{ fontSize: 11, color: "#a0aab4", marginTop: 2 }}>
+                            ${cat.spent.toLocaleString()} / ${cat.budget.toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 700,
+                            color,
+                            background: cat.pct >= 100 ? "#fff1f3" : cat.pct >= 80 ? "#fffbeb" : "#f0f7ff",
+                            border: `1px solid ${cat.pct >= 100 ? "#fecdd3" : cat.pct >= 80 ? "#fde68a" : "#bfdbfe"}`,
+                            borderRadius: 6,
+                            padding: "2px 7px",
+                          }}
+                        >
+                          {cat.pct}%
+                        </span>
+                        {leftover > 0 && (
+                          <p style={{ fontSize: 10, color: "#a0aab4", marginTop: 3 }}>
+                            ${leftover} left
+                          </p>
+                        )}
+                      </div>
+                    </div>
 
-            {/* Footer */}
+                    {/* Bar */}
+                    <div style={{ height: 4, background: "#f0f2f5", borderRadius: 99, overflow: "hidden" }}>
+                      <div
+                        style={{
+                          height: "100%",
+                          width: `${Math.min(cat.pct, 100)}%`,
+                          background: color,
+                          borderRadius: 99,
+                        }}
+                      />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </Card>
+
+          {/* Transactions */}
+          <Card
+            className="animate-fade-up"
+            style={{ animationDelay: "200ms" }}
+          >
             <div
-              className="px-6 py-3 flex items-center justify-between"
-              style={{ borderTop: "1px solid #f3f4f6", background: "#fafafa" }}
+              className="flex items-center justify-between"
+              style={{ padding: "16px 20px 12px", borderBottom: "1px solid #f0f2f5" }}
             >
-              <span className="font-body text-[12px] text-zinc-400">
-                Showing 5 of 5 transactions
-              </span>
-              <span
-                className="font-display font-semibold text-[13px]"
-                style={{ color: "#059669" }}
-              >
-                Total: −$289.83
+              <p style={{ fontSize: 13, fontWeight: 700, color: "#14171a" }}>
+                Recent transactions
+              </p>
+              <span style={{ fontSize: 12, color: "#0052ff", fontWeight: 600, cursor: "pointer" }}>
+                View all
               </span>
             </div>
-          </div>
+
+            <div>
+              {transactions.map((tx, i) => (
+                <div
+                  key={i}
+                  className="group animate-fade-up"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "13px 20px",
+                    borderBottom: i < transactions.length - 1 ? "1px solid #f7f8fa" : "none",
+                    cursor: "default",
+                    transition: "background 0.15s",
+                    animationDelay: `${240 + i * 35}ms`,
+                  }}
+                >
+                  {/* Merchant */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 10,
+                        background: "#f0f2f5",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 14,
+                        fontWeight: 700,
+                        color: "#5e6e7a",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {tx.name.charAt(0)}
+                    </div>
+                    <div>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: "#14171a" }}>
+                        {tx.name}
+                      </p>
+                      <p style={{ fontSize: 11, color: "#a0aab4", marginTop: 1 }}>
+                        {tx.category}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Right side */}
+                  <div style={{ textAlign: "right" }}>
+                    <p
+                      style={{
+                        fontSize: 14,
+                        fontWeight: 700,
+                        color: "#f6465d",
+                        letterSpacing: "-0.01em",
+                        lineHeight: 1,
+                      }}
+                    >
+                      −${fmt(tx.amount)}
+                    </p>
+                    <p style={{ fontSize: 11, color: "#a0aab4", marginTop: 3 }}>
+                      {tx.date}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Summary footer */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "12px 20px",
+                background: "#f7f8fa",
+                borderTop: "1px solid #e8ecef",
+                borderRadius: "0 0 16px 16px",
+              }}
+            >
+              <span style={{ fontSize: 12, color: "#5e6e7a", fontWeight: 500 }}>
+                5 transactions
+              </span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#f6465d" }}>
+                −${fmt(transactions.reduce((s, t) => s + t.amount, 0))}
+              </span>
+            </div>
+          </Card>
         </div>
 
       </main>

@@ -45,6 +45,53 @@
 .animate-fade-up { animation: fade-up  0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
 .animate-fade-in { animation: fade-in  0.4s ease both; }
 
+/* ── Bento grid — fixed row heights only on desktop ─────────────── */
+@media (min-width: 1024px) {
+  .bento-grid {
+    grid-template-rows: 284px 284px;
+  }
+}
+
+/* ── Build card — animated gradient border ───────────────────────── */
+
+/* Register the angle custom property so it can be animated smoothly */
+@property --build-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes build-border-spin {
+  to { --build-angle: 360deg; }
+}
+
+/* Outer card: white bg + transparent border (border drawn by ::before) */
+.build-card {
+  background: white;
+  border: 1.5px solid transparent;
+}
+
+/* The rotating gradient border lives in a pseudo-element behind the content */
+.build-card-border {
+  background:
+    linear-gradient(white, white) padding-box,
+    conic-gradient(
+      from var(--build-angle),
+      var(--s-accent),
+      #a78bfa,
+      #60a5fa,
+      var(--s-accent)
+    ) border-box;
+  border: 1.5px solid transparent;
+  animation: build-border-spin 5s linear infinite;
+  opacity: 0.7;
+  transition: opacity 0.3s ease;
+}
+
+.build-card:hover .build-card-border {
+  opacity: 1;
+}
+
 /* ── Dropdown ───────────────────────────────────────────────────── */
 
 @keyframes dropdown-in {

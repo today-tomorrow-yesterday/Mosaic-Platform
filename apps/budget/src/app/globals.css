@@ -24,17 +24,28 @@
     --input: 240 5.9% 90%;
     --ring: 240 5.9% 10%;
     --radius: 0.5rem;
+
+    /* Budget design tokens */
+    --brand:   #0052ff;
+    --green:   #00c076;
+    --red:     #f6465d;
+    --amber:   #f0a500;
+    --ink:     #14171a;
+    --sub:     #5e6e7a;
+    --border-c:#e8ecef;
+    --surface: #f7f8fa;
   }
 
   body {
     @apply antialiased;
-    font-family: var(--font-body), system-ui, sans-serif;
-    background: #f0f2f5;
+    font-family: var(--font-sans), system-ui, sans-serif;
+    background: var(--surface);
+    color: var(--ink);
   }
 }
 
 @keyframes fade-up {
-  from { opacity: 0; transform: translateY(18px); }
+  from { opacity: 0; transform: translateY(14px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
@@ -43,15 +54,5 @@
   to   { opacity: 1; }
 }
 
-@keyframes bar-fill {
-  from { width: 0; }
-  to   { width: var(--bar-pct); }
-}
-
-.animate-fade-up {
-  animation: fade-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.animate-fade-in {
-  animation: fade-in 0.4s ease both;
-}
+.animate-fade-up  { animation: fade-up  0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-fade-in  { animation: fade-in  0.35s ease both; }

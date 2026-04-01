@@ -3,6 +3,7 @@ import { cookies } from "next/headers"
 import { Home, CalendarDays, Wallet, Baby, ArrowUpRight } from "lucide-react"
 import { LogoBees } from "@/components/LogoBees"
 import { AvatarMenu } from "@/components/AvatarMenu"
+import { BuildCard } from "@/components/BuildCard"
 import { getCurrentSeason } from "@/lib/season"
 import type { SeasonId } from "@/lib/season"
 
@@ -38,23 +39,23 @@ export default async function DashboardPage() {
 
       {/* Nav */}
       <header
-        className="relative z-10 flex items-center justify-between px-10 pt-8 max-w-[1100px] mx-auto animate-fade-in"
+        className="relative z-10 flex items-center justify-between px-4 sm:px-6 lg:px-10 pt-6 sm:pt-8 max-w-[1100px] mx-auto animate-fade-in"
         style={{ animationDelay: "0ms" }}
       >
         <LogoBees season={resolvedSeason} />
 
         <div className="flex items-center gap-4">
-          <span className="font-body text-[12px] text-zinc-400 tabular-nums">
+          <span className="hidden sm:inline font-body text-[12px] text-zinc-400 tabular-nums">
             {getDateString()}
           </span>
           <AvatarMenu activeSeason={activeSeason} />
         </div>
       </header>
 
-      <main className="relative max-w-[1100px] mx-auto px-10 pt-12 pb-16">
+      <main className="relative max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-10 pt-8 lg:pt-12 pb-16">
 
         {/* Greeting */}
-        <div className="mb-12">
+        <div className="mb-8 lg:mb-12">
           <div
             className="flex items-center gap-3 mb-5 animate-fade-up"
             style={{ animationDelay: "80ms" }}
@@ -90,22 +91,19 @@ export default async function DashboardPage() {
         </div>
 
         {/* Bento grid */}
-        <div
-          className="grid grid-cols-3 gap-3.5"
-          style={{ gridTemplateRows: "284px 284px" }}
-        >
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 bento-grid">
 
           {/* Home — wide */}
           <a
             href={process.env.NEXT_PUBLIC_HOME_URL ?? "https://home.atlas-homevault.com"}
-            className="group col-span-2 rounded-[24px] overflow-hidden border flex flex-col transition-all duration-300 hover:shadow-2xl animate-fade-up"
+            className="group sm:col-span-2 lg:col-span-2 min-h-[220px] lg:min-h-0 rounded-[24px] overflow-hidden border flex flex-col transition-all duration-300 hover:shadow-2xl animate-fade-up"
             style={{
               background: "#fffbf5",
               borderColor: "#ede7da",
               animationDelay: "300ms",
             }}
           >
-            <div className="flex-1 relative overflow-hidden p-7">
+            <div className="flex-1 relative overflow-hidden p-5 lg:p-7">
               <div
                 className="absolute top-0 right-0 pointer-events-none"
                 style={{ width: 160, height: 160, overflow: "hidden", borderRadius: "0 24px 0 0" }}
@@ -132,10 +130,10 @@ export default async function DashboardPage() {
                     <p className="font-body text-[10px] font-semibold uppercase text-zinc-400 mb-2" style={{ letterSpacing: "0.2em" }}>
                       Smart Home
                     </p>
-                    <h2 className="font-display text-[#1a1208] leading-none" style={{ fontWeight: 500, fontSize: "38px", letterSpacing: "-0.02em" }}>
+                    <h2 className="font-display text-[#1a1208] leading-none" style={{ fontWeight: 500, fontSize: "clamp(24px, 3.5vw, 38px)", letterSpacing: "-0.02em" }}>
                       Home
                     </h2>
-                    <p className="font-body text-[13px] text-zinc-500 mt-2 leading-relaxed" style={{ maxWidth: 268 }}>
+                    <p className="font-body text-[13px] text-zinc-500 mt-2 leading-relaxed">
                       Control devices, automations, and monitor every corner of your home.
                     </p>
                   </div>
@@ -154,10 +152,10 @@ export default async function DashboardPage() {
           {/* Calendar — tall */}
           <a
             href={process.env.NEXT_PUBLIC_CALENDAR_URL ?? "https://calendar.atlas-homevault.com"}
-            className="group row-span-2 rounded-[24px] overflow-hidden border flex flex-col transition-all duration-300 hover:shadow-2xl animate-fade-up"
+            className="group lg:row-span-2 min-h-[220px] lg:min-h-0 rounded-[24px] overflow-hidden border flex flex-col transition-all duration-300 hover:shadow-2xl animate-fade-up"
             style={{ background: "#f5f7ff", borderColor: "#dde3f5", animationDelay: "360ms" }}
           >
-            <div className="flex-1 relative overflow-hidden flex flex-col p-7">
+            <div className="flex-1 relative overflow-hidden flex flex-col p-5 lg:p-7">
               <div className="absolute top-5 right-5 pointer-events-none">
                 <div className="grid gap-[7px] transition-opacity duration-300" style={{ gridTemplateColumns: "repeat(5, 1fr)", opacity: 0.18 }}>
                   {Array.from({ length: 25 }).map((_, i) => (
@@ -181,7 +179,7 @@ export default async function DashboardPage() {
                   <p className="font-body text-[10px] font-semibold uppercase text-zinc-400 mb-2" style={{ letterSpacing: "0.2em" }}>
                     Family Schedule
                   </p>
-                  <h2 className="font-display text-[#1a1208] leading-none" style={{ fontWeight: 500, fontSize: "38px", letterSpacing: "-0.02em" }}>
+                  <h2 className="font-display text-[#1a1208] leading-none" style={{ fontWeight: 500, fontSize: "clamp(24px, 3.5vw, 38px)", letterSpacing: "-0.02em" }}>
                     Calendar
                   </h2>
                   <p className="font-body text-[13px] text-zinc-500 mt-2 leading-relaxed">
@@ -207,10 +205,10 @@ export default async function DashboardPage() {
           {/* Budget */}
           <a
             href={process.env.NEXT_PUBLIC_BUDGET_URL ?? "https://budget.atlas-homevault.com"}
-            className="group rounded-[24px] overflow-hidden border flex flex-col transition-all duration-300 hover:shadow-2xl animate-fade-up"
+            className="group min-h-[220px] lg:min-h-0 rounded-[24px] overflow-hidden border flex flex-col transition-all duration-300 hover:shadow-2xl animate-fade-up"
             style={{ background: "#f3fbf6", borderColor: "#d5edd8", animationDelay: "400ms" }}
           >
-            <div className="flex-1 relative overflow-hidden p-7">
+            <div className="flex-1 relative overflow-hidden p-5 lg:p-7">
               <div className="absolute bottom-6 right-6 flex items-end gap-[5px] pointer-events-none transition-opacity duration-300 group-hover:opacity-50" style={{ opacity: 0.18 }}>
                 {[28, 44, 34, 52, 40, 48, 36].map((h, i) => (
                   <div key={i} className="w-[7px] rounded-sm bg-emerald-500" style={{ height: h }} />
@@ -229,7 +227,7 @@ export default async function DashboardPage() {
                     <p className="font-body text-[10px] font-semibold uppercase text-zinc-400 mb-2" style={{ letterSpacing: "0.2em" }}>
                       Financial
                     </p>
-                    <h2 className="font-display text-[#1a1208] leading-none" style={{ fontWeight: 500, fontSize: "38px", letterSpacing: "-0.02em" }}>
+                    <h2 className="font-display text-[#1a1208] leading-none" style={{ fontWeight: 500, fontSize: "clamp(24px, 3.5vw, 38px)", letterSpacing: "-0.02em" }}>
                       Budget
                     </h2>
                     <p className="font-body text-[13px] text-zinc-500 mt-2 leading-relaxed">
@@ -251,10 +249,10 @@ export default async function DashboardPage() {
           {/* Baby */}
           <a
             href={process.env.NEXT_PUBLIC_BABY_URL ?? "https://baby.atlas-homevault.com"}
-            className="group rounded-[24px] overflow-hidden border flex flex-col transition-all duration-300 hover:shadow-2xl animate-fade-up"
+            className="group min-h-[220px] lg:min-h-0 rounded-[24px] overflow-hidden border flex flex-col transition-all duration-300 hover:shadow-2xl animate-fade-up"
             style={{ background: "#fff7fb", borderColor: "#f0d8e8", animationDelay: "440ms" }}
           >
-            <div className="flex-1 relative overflow-hidden p-7">
+            <div className="flex-1 relative overflow-hidden p-5 lg:p-7">
               <div className="absolute top-4 right-4 pointer-events-none">
                 <div className="w-14 h-14 rounded-full bg-pink-200/50 transition-colors duration-300 group-hover:bg-pink-200/70" />
                 <div className="w-7 h-7 rounded-full bg-pink-300/30 transition-colors duration-300 group-hover:bg-pink-300/50" style={{ marginLeft: 36, marginTop: -10 }} />
@@ -273,7 +271,7 @@ export default async function DashboardPage() {
                     <p className="font-body text-[10px] font-semibold uppercase text-zinc-400 mb-2" style={{ letterSpacing: "0.2em" }}>
                       Milestones
                     </p>
-                    <h2 className="font-display text-[#1a1208] leading-none" style={{ fontWeight: 500, fontSize: "38px", letterSpacing: "-0.02em" }}>
+                    <h2 className="font-display text-[#1a1208] leading-none" style={{ fontWeight: 500, fontSize: "clamp(24px, 3.5vw, 38px)", letterSpacing: "-0.02em" }}>
                       Baby
                     </h2>
                     <p className="font-body text-[13px] text-zinc-500 mt-2 leading-relaxed">
@@ -293,6 +291,25 @@ export default async function DashboardPage() {
           </a>
 
         </div>
+
+        {/* ── Build section ── */}
+        <div className="mt-8 lg:mt-10 animate-fade-up" style={{ animationDelay: "480ms" }}>
+          <div className="flex items-center gap-2 mb-3.5">
+            <div className="w-5 h-px bg-[var(--s-accent)] opacity-40" />
+            <span
+              className="font-body text-[10px] font-semibold uppercase text-zinc-400"
+              style={{ letterSpacing: "0.18em" }}
+            >
+              AI Studio
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5" style={{ gridTemplateRows: "220px" }}>
+            <BuildCard />
+            {/* Prototype app cards will be inserted here as they're created */}
+          </div>
+        </div>
+
       </main>
     </div>
   )
