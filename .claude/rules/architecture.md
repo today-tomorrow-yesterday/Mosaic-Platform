@@ -16,7 +16,7 @@
 
 ## Data Layer — The Only Pattern
 - All data access flows through `BaseRepository` → `DbSet` → builders → `ConvexTranslator` → `ctx.db`
-- `ConvexTranslator` is the **sole** location where `ctx.db` appears — one per Convex app at `convex/_shared/ConvexTranslator.ts`
+- `ConvexTranslator` is the **sole** location where `ctx.db` appears — shared from `packages/db/src/ConvexTranslator.ts`
 - Every Convex function that accesses data creates a `ConvexTranslator`: `new ConvexTranslator(ctx.db)`
 - Extend `BaseRepository` for each entity — never call `DbSet` directly from a Convex function
 - **DO NOT** call `ctx.db.query(...)`, `ctx.db.insert(...)`, etc. anywhere outside `ConvexTranslator`

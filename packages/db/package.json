@@ -10,7 +10,11 @@
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
+  "peerDependencies": {
+    "convex": ">=1.17.0"
+  },
   "devDependencies": {
+    "convex": "^1.17.0",
     "typescript": "^5.0.0"
   }
 }

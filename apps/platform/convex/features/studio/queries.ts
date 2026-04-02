@@ -1,5 +1,5 @@
 import { query } from "../../_generated/server"
-import { ConvexTranslator } from "../../_shared/ConvexTranslator"
+import { ConvexTranslator } from "@mosaic/db"
 import { PrototypeRepository } from "./PrototypeRepository"
 
 export const listSaved = query({

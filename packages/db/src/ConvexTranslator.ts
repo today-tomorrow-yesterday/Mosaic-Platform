@@ -1,17 +1,23 @@
-import type { GenericDatabaseReader, GenericDatabaseWriter, GenericDataModel } from "convex/server"
-import type { ITranslator, UpsertOptions, IQueryable } from "@mosaic/db"
+import type { GenericDatabaseReader, GenericDatabaseWriter } from "convex/server"
+import type { ITranslator, UpsertOptions } from "./ITranslator"
+import type { IQueryable } from "./IQueryable"
 
-type Reader = GenericDatabaseReader<GenericDataModel>
-type Writer = GenericDatabaseWriter<GenericDataModel>
+// Use `any` so this translator is compatible with both empty and populated schemas
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Reader = GenericDatabaseReader<any>
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Writer = GenericDatabaseWriter<any>
 
 /**
- * ConvexTranslator — the ONLY place ctx.db appears in the home app.
+ * ConvexTranslator — the single ITranslator implementation for Convex.
  * Inject per-function: new ConvexTranslator(ctx.db)
  */
 export class ConvexTranslator implements ITranslator {
   constructor(private readonly db: Reader | Writer) {}
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private buildFilter<T>(q: any, state: IQueryable<T>): any {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const clauses: any[] = []
 
     for (const condition of state.conditions) {
@@ -36,7 +42,7 @@ export class ConvexTranslator implements ITranslator {
     }
     for (const { column, values } of state.whereIn) {
       if (values.length > 0) {
-        clauses.push(q.or(...values.map((v) => q.eq(q.field(String(column)), v))))
+        clauses.push(q.or(...values.map((v: unknown) => q.eq(q.field(String(column)), v))))
       }
     }
     for (const { column, values } of state.whereNotIn) {
@@ -52,17 +58,21 @@ export class ConvexTranslator implements ITranslator {
 
   async executeSelect<T>(state: IQueryable<T>): Promise<T[]> {
     const reader = this.db as Reader
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let query = reader.query(state.table as any).filter((q) => {
       const condition = this.buildFilter(q, state)
       return condition ?? true
     })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if (state.orderBy.length > 0) query = (query as any).order(state.orderBy[0]!.direction)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if (state.limit !== undefined) return (await (query as any).take(state.limit)) as T[]
     return (await query.collect()) as T[]
   }
 
   async executeSelectFirst<T>(state: IQueryable<T>): Promise<T | null> {
     const reader = this.db as Reader
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return await reader.query(state.table as any).filter((q) => {
       const condition = this.buildFilter(q, state)
       return condition ?? true
@@ -79,6 +89,7 @@ export class ConvexTranslator implements ITranslator {
 
   async executeInsert<T>(table: string, data: Omit<T, "_id" | "_creationTime">): Promise<T> {
     const writer = this.db as Writer
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const id = await writer.insert(table as any, data as any)
     const record = await (this.db as Reader).get(id)
     return record as unknown as T
@@ -87,13 +98,16 @@ export class ConvexTranslator implements ITranslator {
   async executeUpdate<T>(state: IQueryable<T>): Promise<void> {
     const writer = this.db as Writer
     const records = await this.executeSelect(state)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await Promise.all(records.map((r) => writer.patch((r as any)._id, state.data as any)))
   }
 
   async executeUpdateReturning<T>(state: IQueryable<T>): Promise<T[]> {
     const writer = this.db as Writer
     const records = await this.executeSelect(state)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const ids = records.map((r) => (r as any)._id)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await Promise.all(records.map((r) => writer.patch((r as any)._id, state.data as any)))
     return Promise.all(ids.map((id) => (this.db as Reader).get(id))) as Promise<T[]>
   }
@@ -101,18 +115,23 @@ export class ConvexTranslator implements ITranslator {
   async executeDelete<T>(state: IQueryable<T>): Promise<void> {
     const writer = this.db as Writer
     const records = await this.executeSelect(state)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await Promise.all(records.map((r) => writer.delete((r as any)._id)))
   }
 
   async executeUpsert<T>(table: string, data: T, options: UpsertOptions): Promise<void> {
     const reader = this.db as Reader
     const writer = this.db as Writer
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const existing = await reader.query(table as any)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .filter((q) => q.eq(q.field(options.onConflict), (data as any)[options.onConflict]))
       .first()
     if (existing?._id) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await writer.patch(existing._id as any, data as any)
     } else {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await writer.insert(table as any, data as any)
     }
   }

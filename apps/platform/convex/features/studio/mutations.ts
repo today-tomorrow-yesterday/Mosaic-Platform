@@ -1,7 +1,7 @@
 import { ConvexError } from "convex/values"
 import { mutation } from "../../_generated/server"
 import { v } from "convex/values"
-import { ConvexTranslator } from "../../_shared/ConvexTranslator"
+import { ConvexTranslator } from "@mosaic/db"
 import { PrototypeRepository } from "./PrototypeRepository"
 
 export const save = mutation({
