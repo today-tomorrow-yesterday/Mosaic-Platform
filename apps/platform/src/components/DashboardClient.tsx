@@ -3,9 +3,11 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import {
   ArrowUpRight, Home, Wallet, Baby, CalendarDays,
-  Hexagon, Users, X, Plus, ChevronRight, LogOut, UserRound,
+  Hexagon, Users, X, Plus, ChevronRight, LogOut, UserRound, FlaskConical,
 } from 'lucide-react'
 import { useUser, useClerk } from '@clerk/nextjs'
+import { GlassFilterSvg, GlassLabPanel, glassBackdropFilter, DEFAULT_GLASS } from './GlassLab'
+import type { GlassParams } from './GlassLab'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -119,8 +121,8 @@ const BENTO_CARDS: BentoCard[] = [
     statusLabel: 'Devices', statusValue: '5 active',
     illus: () => (
       <>
-        <div className="absolute -top-16 -right-16 w-64 h-64 border-[24px] border-orange-500/5 rounded-full pointer-events-none" />
-        <div className="absolute -top-8 -right-8 w-40 h-40 border-[20px] border-orange-500/10 rounded-full pointer-events-none" />
+        <div className="absolute -top-16 -right-16 w-64 h-64 border-[24px] border-orange-400 rounded-full pointer-events-none" />
+        <div className="absolute -top-8 -right-8 w-40 h-40 border-[20px] border-orange-400 rounded-full pointer-events-none" />
       </>
     ),
   },
@@ -134,7 +136,7 @@ const BENTO_CARDS: BentoCard[] = [
     statusLabel: 'This week', statusValue: '3 events',
     illus: () => (
       <div
-        className="absolute top-8 right-8 w-24 h-24 opacity-10 pointer-events-none"
+        className="absolute top-8 right-8 w-24 h-24 pointer-events-none"
         style={{ backgroundImage: 'radial-gradient(circle, #3b82f6 2px, transparent 2px)', backgroundSize: '12px 12px' }}
       />
     ),
@@ -148,7 +150,7 @@ const BENTO_CARDS: BentoCard[] = [
     activities: ['Groceries', 'Utilities', 'Transport'],
     statusLabel: 'Spent', statusValue: '$1,240',
     illus: () => (
-      <div className="absolute -bottom-2 right-6 flex items-end gap-[6px] opacity-10 pointer-events-none">
+      <div className="absolute -bottom-2 right-6 flex items-end gap-[6px] pointer-events-none">
         <div className="w-3 h-8 bg-emerald-400 rounded-t-full" />
         <div className="w-3 h-14 bg-emerald-400 rounded-t-full" />
         <div className="w-3 h-10 bg-emerald-400 rounded-t-full" />
@@ -165,8 +167,8 @@ const BENTO_CARDS: BentoCard[] = [
     statusLabel: 'Age', statusValue: '4 months',
     illus: () => (
       <>
-        <div className="absolute top-4 right-10 w-16 h-16 bg-pink-500/10 rounded-full blur-[2px] pointer-events-none" />
-        <div className="absolute top-12 right-4 w-12 h-12 bg-pink-500/15 rounded-full pointer-events-none" />
+        <div className="absolute top-4 right-10 w-16 h-16 bg-pink-400 rounded-full blur-[2px] pointer-events-none" />
+        <div className="absolute top-12 right-4 w-12 h-12 bg-pink-400 rounded-full pointer-events-none" />
       </>
     ),
   },
@@ -357,6 +359,9 @@ export function DashboardClient({
   const [noTransitionIds, setNoTransitionIds] = useState<string[]>([])
   const [teleportingIds, setTeleportingIds] = useState<string[]>([])
   const [hoveredCard, setHoveredCard] = useState<string | null>(null)
+  const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null)
+  const [glassParams, setGlassParams] = useState<GlassParams>(DEFAULT_GLASS)
+  const [labOpen, setLabOpen] = useState(false)
   const [greeting, setGreeting] = useState('Good Evening')
   const [dateStr, setDateStr] = useState('')
 
@@ -519,10 +524,12 @@ export function DashboardClient({
     const motionDur = expand?.dur ?? EXPAND_DUR
     const chromeSlide = isExpanding ? -80 : isHoveringAnyCard ? -60 : 0
     const chromeOpacity = isExpanding ? 0 : isHoveringAnyCard ? 0.2 : 1
-    const chromeTrans = `transform ${isHoveringAnyCard && !isExpanding ? '400ms' : `${motionDur * 0.6}ms`} cubic-bezier(0.4,0,0.2,1), opacity ${isHoveringAnyCard && !isExpanding ? '400ms' : `${motionDur * 0.4}ms`} ease`
+    const hoverEase = 'cubic-bezier(0.34, 1.56, 0.64, 1)'
+    const hoverDur = '400ms'
+    const chromeTrans = `transform ${isHoveringAnyCard && !isExpanding ? hoverDur : `${motionDur * 0.6}ms`} ${hoverEase}, opacity ${isHoveringAnyCard && !isExpanding ? hoverDur : `${motionDur * 0.4}ms`} ease`
     const greetingSlide = isExpanding ? -40 : isHoveringAnyCard ? -25 : 0
     const greetingOpacity = isExpanding ? 0 : isHoveringAnyCard ? 0.3 : 1
-    const greetingTrans = `transform ${isHoveringAnyCard && !isExpanding ? '400ms' : `${motionDur * 0.5}ms`} cubic-bezier(0.4,0,0.2,1), opacity ${isHoveringAnyCard && !isExpanding ? '400ms' : `${motionDur * 0.3}ms`} ease`
+    const greetingTrans = `transform ${isHoveringAnyCard && !isExpanding ? hoverDur : `${motionDur * 0.5}ms`} ${hoverEase}, opacity ${isHoveringAnyCard && !isExpanding ? hoverDur : `${motionDur * 0.3}ms`} ease`
 
     const cloneFadeClass = isClone ? 'fade-out-midway' : ''
     const cloneAnimStyle: React.CSSProperties = isClone ? { animationDelay: `${_cloneIdx * 80}ms` } : {}
@@ -547,7 +554,19 @@ export function DashboardClient({
             backgroundSize: '200% 200%', zIndex: 0,
           }}
         />
-        <div className={`absolute inset-0 bg-black/40 z-10 transition-colors duration-300 pointer-events-none ${position > 0 ? 'group-hover:bg-black/20' : ''}`} />
+        {/* Stack background image (selected via Lab) */}
+        {glassParams.stackBgImage && (
+          <div style={{ position: 'absolute', inset: -20, zIndex: 0, overflow: 'hidden', borderRadius: 'inherit' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              className={glassParams.bgMotion ? 'glass-lab-drift' : undefined}
+              src={glassParams.stackBgImage.url}
+              alt=""
+              style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: glassParams.stackBgImage.position, display: 'block' }}
+            />
+          </div>
+        )}
+        <div className={`absolute inset-0 z-10 transition-colors duration-300 pointer-events-none ${glassParams.stackBgImage !== null ? 'bg-black/15' : 'bg-black/40'} ${position > 0 ? 'group-hover:bg-black/10' : ''}`} />
 
         {/* ── Spine (visible when stacked) ── */}
         <div style={{
@@ -582,8 +601,8 @@ export function DashboardClient({
           <div
             className={cloneFadeClass}
             style={{
-              position: 'absolute', top: 0, left: 0, backgroundColor: BG, borderBottomRightRadius: 28,
-              zIndex: 40, paddingLeft: 5, paddingBottom: 5,
+              position: 'absolute', top: -1, left: -1, backgroundColor: BG, borderBottomRightRadius: 28,
+              zIndex: 40, paddingLeft: 6, paddingBottom: 5,
               transform: `translateY(${chromeSlide}px)`, opacity: chromeOpacity, transition: chromeTrans,
               pointerEvents: isExpanding ? 'none' : 'auto',
               ...cloneAnimStyle,
@@ -602,9 +621,22 @@ export function DashboardClient({
                   <button
                     onClick={handleReset}
                     style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 9999, backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.05)', color: '#d1d5db', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
-                    className="hover:bg-white/10 hover:text-white transition-all duration-300"
+                    className="hover:bg-white/10 hover:text-white transition-colors duration-200"
                   >
                     <Home size={15} /> Launchpad
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setLabOpen(o => !o) }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 9999,
+                      backgroundColor: labOpen ? 'rgba(167,139,250,0.15)' : 'rgba(255,255,255,0.05)',
+                      border: `1px solid ${labOpen ? 'rgba(167,139,250,0.3)' : 'rgba(255,255,255,0.05)'}`,
+                      color: labOpen ? '#c4b5fd' : '#d1d5db',
+                      fontSize: 13, fontWeight: 500, cursor: 'pointer',
+                    }}
+                    className="hover:bg-white/10 transition-colors duration-200"
+                  >
+                    <FlaskConical size={15} /> Lab
                   </button>
                 </>
               )}
@@ -615,8 +647,8 @@ export function DashboardClient({
           <div
             className={cloneFadeClass}
             style={{
-              position: 'absolute', top: 0, right: 0, backgroundColor: BG, borderBottomLeftRadius: 28,
-              zIndex: 40, paddingRight: 5, paddingBottom: 5,
+              position: 'absolute', top: -1, right: -1, backgroundColor: BG, borderBottomLeftRadius: 28,
+              zIndex: 40, paddingRight: 6, paddingBottom: 5,
               transform: `translateY(${chromeSlide}px)`, opacity: chromeOpacity, transition: chromeTrans,
               pointerEvents: isExpanding ? 'none' : 'auto',
               ...cloneAnimStyle,
@@ -683,6 +715,13 @@ export function DashboardClient({
               <div
                 ref={isFrontCard ? bentoGridRef : undefined}
                 style={{ flex: 1, position: 'relative', minHeight: 280, overflow: 'visible' }}
+                onMouseMove={isFrontCard && !expand ? (e) => {
+                  const grid = bentoGridRef.current
+                  if (!grid) return
+                  const rect = grid.getBoundingClientRect()
+                  setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top })
+                } : undefined}
+                onMouseLeave={isFrontCard ? () => { setMousePos(null); setHoveredCard(null) } : undefined}
               >
                 {/* Invisible probes track original card positions for collapse animation */}
                 {isFrontCard && BENTO_CARDS.map(card => (
@@ -728,7 +767,43 @@ export function DashboardClient({
                   }
 
                   const isHovered = hoveredCard === card.id && !expand
-                  const isOtherHovered = !!hoveredCard && hoveredCard !== card.id && !expand
+
+                  // Proximity-based dimming: calculate how much to dim this card
+                  // based on how close the mouse is to another card
+                  let proximityDim = 0
+                  if (mousePos && !expand && !isHovered) {
+                    const cardEl = cardRefs.current[card.id]
+                    if (cardEl) {
+                      const cx = cardEl.offsetLeft + cardEl.offsetWidth / 2
+                      const cy = cardEl.offsetTop + cardEl.offsetHeight / 2
+                      const dist = Math.sqrt((mousePos.x - cx) ** 2 + (mousePos.y - cy) ** 2)
+                      const cardSize = Math.max(cardEl.offsetWidth, cardEl.offsetHeight)
+                      // Start dimming when mouse is within 2x card size, max dim when directly on another card
+                      const threshold = cardSize * 2
+                      if (hoveredCard) {
+                        // Mouse is on a card — full dim for siblings
+                        proximityDim = 0.35
+                      } else if (dist < threshold) {
+                        // Mouse approaching but not on any card yet — partial dim based on proximity to closest card
+                        // Find distance to the closest OTHER card
+                        let minDistToOther = Infinity
+                        for (const other of BENTO_CARDS) {
+                          if (other.id === card.id) continue
+                          const otherEl = cardRefs.current[other.id]
+                          if (!otherEl) continue
+                          const ox = otherEl.offsetLeft + otherEl.offsetWidth / 2
+                          const oy = otherEl.offsetTop + otherEl.offsetHeight / 2
+                          const od = Math.sqrt((mousePos.x - ox) ** 2 + (mousePos.y - oy) ** 2)
+                          minDistToOther = Math.min(minDistToOther, od)
+                        }
+                        const otherSize = cardSize * 0.8
+                        if (minDistToOther < otherSize) {
+                          proximityDim = Math.min(0.35, (1 - minDistToOther / otherSize) * 0.35)
+                        }
+                      }
+                    }
+                  }
+                  const isOtherHovered = proximityDim > 0
 
                   return (
                     <div
@@ -747,20 +822,49 @@ export function DashboardClient({
                         background: `linear-gradient(145deg, ${card.glassTint} 0%, rgba(8,6,20,0.18) 100%)`,
                         boxShadow: '0 20px 60px rgba(0,0,0,0.6), 0 4px 16px rgba(0,0,0,0.35)',
                         zIndex: zIdx,
-                        transition: transitionStr,
-                        // layout-property animations can't be GPU-composited; only 'transform' is useful here
+                        transition: transitionStr !== 'none'
+                          ? `${transitionStr}, transform 400ms cubic-bezier(0.34, 1.56, 0.64, 1)`
+                          : 'transform 400ms cubic-bezier(0.34, 1.56, 0.64, 1)',
                         willChange: 'transform',
-                        transform: 'translateZ(0)',
+                        transform: isHovered ? 'scale(1.02) translateZ(0)' : 'translateZ(0)',
                         backfaceVisibility: 'hidden',
                       }}
                     >
-                      {/* ── Glass blur — simplified, no SVG displacement map (GPU-expensive).
-                           Disabled during expansion to avoid per-frame repaint flicker. ── */}
+                      {/* ── Background image (selected via Lab) — sits behind glass so refraction is visible ── */}
+                      {glassParams.bgImage && (
+                        <div style={{
+                          position: 'absolute', inset: -15, zIndex: -1, borderRadius: 'inherit', overflow: 'hidden',
+                          pointerEvents: 'none',
+                        }}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            className={glassParams.bgMotion ? 'glass-lab-drift' : undefined}
+                            src={glassParams.bgImage.url}
+                            alt=""
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: glassParams.bgImage.position, display: 'block' }}
+                          />
+                        </div>
+                      )}
+
+                      {/* ── Glass engine filter (swappable via Lab) ── */}
+                      <GlassFilterSvg cardId={card.id} params={glassParams} />
+
+                      {/* ── Glass backdrop — routes through the active engine filter ── */}
                       <div style={{
                         position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none', borderRadius: 'inherit',
-                        backdropFilter: isMounted ? 'none' : 'blur(6px)',
-                        WebkitBackdropFilter: isMounted ? 'none' : 'blur(6px)',
+                        backdropFilter: isMounted ? 'none' : glassBackdropFilter(card.id, glassParams),
+                        WebkitBackdropFilter: isMounted ? 'none' : glassBackdropFilter(card.id, glassParams),
                       }} />
+
+                      {/* ── Glass surface tint ── */}
+                      {glassParams.opacity > 0 && (
+                        <div style={{
+                          position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none', borderRadius: 'inherit',
+                          backgroundColor: glassParams.tint === 'light'
+                            ? `rgba(255,255,255,${glassParams.opacity})`
+                            : `rgba(0,10,30,${glassParams.opacity})`,
+                        }} />
+                      )}
 
                       {/* ── Glass edge: gradient border (mask trick) — cheap, always on ── */}
                       <div className="bento-glass-edge" style={{
@@ -787,11 +891,11 @@ export function DashboardClient({
                         animationPlayState: isMounted ? 'paused' : 'running',
                       }} />
 
-                      {/* Sibling dim overlay on hover */}
+                      {/* Sibling dim overlay — proximity-based gradual darkening */}
                       <div style={{
                         position: 'absolute', inset: 0, zIndex: 7, backgroundColor: 'black',
-                        opacity: isOtherHovered ? 0.35 : 0,
-                        transition: 'opacity 300ms ease', pointerEvents: 'none',
+                        opacity: proximityDim,
+                        transition: 'opacity 150ms ease', pointerEvents: 'none',
                       }} />
 
                       {/* Dark overlay when expanding */}
@@ -821,7 +925,11 @@ export function DashboardClient({
                             ? `collapsedFadeIn ${expand.dur}ms ease forwards`
                             : 'none',
                       } : { position: 'absolute', inset: 0, zIndex: 6, opacity: 1 }}>
-                        <div style={{ position: 'absolute', inset: 0, zIndex: 6 }}>{card.illus()}</div>
+                        <div style={{
+                          position: 'absolute', inset: 0, zIndex: 6,
+                          transform: isHovered ? 'scale(1.1) translate(-3px, -3px)' : 'scale(1) translate(0, 0)',
+                          transition: 'transform 500ms cubic-bezier(0.34, 1.56, 0.64, 1)',
+                        }}>{card.illus()}</div>
                         <div style={{
                           position: 'absolute', inset: 0, zIndex: 10,
                           padding: Math.min(24, Math.max(14, containerW * 0.02)),
@@ -1029,6 +1137,15 @@ export function DashboardClient({
           {swipingClones.map(clone => renderProfileCard(clone, true))}
         </div>
       </div>
+
+      {/* ── Glass Laboratory panel ── */}
+      {labOpen && (
+        <GlassLabPanel
+          params={glassParams}
+          onChange={setGlassParams}
+          onClose={() => setLabOpen(false)}
+        />
+      )}
     </>
   )
 }
