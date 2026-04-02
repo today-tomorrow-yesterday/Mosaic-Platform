@@ -667,19 +667,26 @@ export function DashboardClient({
             backgroundSize: '200% 200%', zIndex: 0,
           }}
         />
-        {/* Stack background image (selected via Lab) */}
-        {glassParams.stackBgImage && (
-          <div style={{ position: 'absolute', inset: -20, zIndex: 0, overflow: 'hidden', borderRadius: 'inherit' }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              className={glassParams.bgMotion ? 'glass-lab-drift' : undefined}
-              src={glassParams.stackBgImage.url}
-              alt=""
-              style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: glassParams.stackBgImage.position, display: 'block', ...(glassParams.bgMotion ? { animationDuration: `${glassParams.bgMotionSpeed}s` } : {}) }}
-            />
-          </div>
-        )}
-        <div className={`absolute inset-0 z-10 transition-colors duration-300 pointer-events-none ${glassParams.stackBgImage !== null ? 'bg-black/15' : 'bg-black/40'} ${stackPosition > 0 ? 'group-hover:bg-black/10' : ''}`} />
+        {/* Stack background image (per-profile, selected via Lab) */}
+        {(() => {
+          const stackBg = glassParams.stackBgImages[profile.id] ?? null
+          return (
+            <>
+              {stackBg && (
+                <div style={{ position: 'absolute', inset: -20, zIndex: 0, overflow: 'hidden', borderRadius: 'inherit' }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    className={glassParams.bgMotion ? 'glass-lab-drift' : undefined}
+                    src={stackBg.url}
+                    alt=""
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: stackBg.position, display: 'block', ...(glassParams.bgMotion ? { animationDuration: `${glassParams.bgMotionSpeed}s` } : {}) }}
+                  />
+                </div>
+              )}
+              <div className={`absolute inset-0 z-10 transition-colors duration-300 pointer-events-none ${stackBg !== null ? 'bg-black/15' : 'bg-black/40'} ${stackPosition > 0 ? 'group-hover:bg-black/10' : ''}`} />
+            </>
+          )
+        })()}
 
         {/* ── Spine (visible when stacked) ── */}
         <div style={{
@@ -1233,6 +1240,7 @@ export function DashboardClient({
           params={glassParams}
           onChange={setGlassParams}
           onClose={() => setLabOpen(false)}
+          profiles={profiles.map(p => ({ id: p.id, name: p.name }))}
         />
       )}
     </>

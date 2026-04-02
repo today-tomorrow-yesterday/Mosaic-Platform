@@ -23,10 +23,10 @@ export type GlassParams = {
   refraction: number
   opacity: number
   tint: "light" | "dark"
-  bgImage: BgSelection        // background image behind bento cards
-  stackBgImage: BgSelection    // background image behind the profile stack
-  bgMotion: boolean            // slow drift animation on background images
-  bgMotionSpeed: number        // drift animation duration in seconds (lower = faster)
+  bgImage: BgSelection                    // background image behind bento cards
+  stackBgImages: Record<string, BgSelection>  // per-profile background images for the stack
+  bgMotion: boolean                       // slow drift animation on background images
+  bgMotionSpeed: number                   // drift animation duration in seconds (lower = faster)
 }
 
 export const DEFAULT_GLASS: GlassParams = {
@@ -36,7 +36,7 @@ export const DEFAULT_GLASS: GlassParams = {
   opacity: 0.08,
   tint: "dark",
   bgImage: null,
-  stackBgImage: null,
+  stackBgImages: {},
   bgMotion: false,
   bgMotionSpeed: 12,
 }
@@ -169,10 +169,13 @@ export function glassBackdropFilter(cardId: string, params: GlassParams): string
 
 // ── Lab panel component ──────────────────────────────────────────────────────
 
+export type StackProfile = { id: string; name: string }
+
 interface GlassLabPanelProps {
   params: GlassParams
   onChange: (params: GlassParams) => void
   onClose: () => void
+  profiles: StackProfile[]    // profile list for per-stack background pickers
 }
 
 function Slider({
@@ -195,13 +198,13 @@ function Slider({
   )
 }
 
-export function GlassLabPanel({ params, onChange, onClose }: GlassLabPanelProps): React.ReactElement {
+export function GlassLabPanel({ params, onChange, onClose, profiles }: GlassLabPanelProps): React.ReactElement {
   const update = <K extends keyof GlassParams>(key: K, value: GlassParams[K]): void => {
     onChange({ ...params, [key]: value })
   }
 
   const renderImagePicker = (
-    field: "bgImage" | "stackBgImage",
+    field: string,
     current: BgSelection,
     onSelect: (v: BgSelection) => void,
     noneLabel = "None",
@@ -322,13 +325,13 @@ export function GlassLabPanel({ params, onChange, onClose }: GlassLabPanelProps)
           {renderImagePicker("bgImage", params.bgImage, (v) => update("bgImage", v))}
         </div>
 
-        {/* Stack background picker */}
+        {/* Per-profile stack background pickers */}
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 16, marginTop: 16 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <ImageIcon size={12} color="rgba(255,255,255,0.4)" />
               <span style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.2em", fontWeight: 800, color: "rgba(255,255,255,0.35)" }}>
-                Stack Background
+                Stack Backgrounds
               </span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -361,7 +364,19 @@ export function GlassLabPanel({ params, onChange, onClose }: GlassLabPanelProps)
               )}
             </div>
           </div>
-          {renderImagePicker("stackBgImage", params.stackBgImage, (v) => update("stackBgImage", v), "Grad")}
+          {profiles.map((p) => (
+            <div key={p.id} style={{ marginBottom: 10 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: 6, display: "block" }}>
+                {p.name}
+              </span>
+              {renderImagePicker(
+                "stackBgImages",
+                params.stackBgImages[p.id] ?? null,
+                (v) => onChange({ ...params, stackBgImages: { ...params.stackBgImages, [p.id]: v } }),
+                "Grad",
+              )}
+            </div>
+          ))}
         </div>
       </div>
     </div>
