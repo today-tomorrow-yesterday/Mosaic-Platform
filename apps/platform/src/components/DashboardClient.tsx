@@ -675,7 +675,7 @@ export function DashboardClient({
               className={glassParams.bgMotion ? 'glass-lab-drift' : undefined}
               src={glassParams.stackBgImage.url}
               alt=""
-              style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: glassParams.stackBgImage.position, display: 'block' }}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: glassParams.stackBgImage.position, display: 'block', ...(glassParams.bgMotion ? { animationDuration: `${glassParams.bgMotionSpeed}s` } : {}) }}
             />
           </div>
         )}
@@ -920,7 +920,7 @@ export function DashboardClient({
                             className={glassParams.bgMotion ? 'glass-lab-drift' : undefined}
                             src={glassParams.bgImage.url}
                             alt=""
-                            style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: glassParams.bgImage.position, display: 'block' }}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: glassParams.bgImage.position, display: 'block', ...(glassParams.bgMotion ? { animationDuration: `${glassParams.bgMotionSpeed}s` } : {}) }}
                           />
                         </div>
                       )}

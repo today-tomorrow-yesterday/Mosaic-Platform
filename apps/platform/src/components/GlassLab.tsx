@@ -26,6 +26,7 @@ export type GlassParams = {
   bgImage: BgSelection        // background image behind bento cards
   stackBgImage: BgSelection    // background image behind the profile stack
   bgMotion: boolean            // slow drift animation on background images
+  bgMotionSpeed: number        // drift animation duration in seconds (lower = faster)
 }
 
 export const DEFAULT_GLASS: GlassParams = {
@@ -37,6 +38,7 @@ export const DEFAULT_GLASS: GlassParams = {
   bgImage: null,
   stackBgImage: null,
   bgMotion: false,
+  bgMotionSpeed: 12,
 }
 
 // ── Background image registry ────────────────────────────────────────────────
@@ -329,20 +331,35 @@ export function GlassLabPanel({ params, onChange, onClose }: GlassLabPanelProps)
                 Stack Background
               </span>
             </div>
-            <button
-              onClick={() => update("bgMotion", !params.bgMotion)}
-              style={{
-                display: "flex", alignItems: "center", gap: 6, padding: "4px 12px", borderRadius: 9999,
-                border: "1px solid",
-                borderColor: params.bgMotion ? "rgba(52,211,153,0.4)" : "rgba(255,255,255,0.08)",
-                background: params.bgMotion ? "rgba(52,211,153,0.12)" : "rgba(255,255,255,0.03)",
-                color: params.bgMotion ? "#34d399" : "rgba(255,255,255,0.4)",
-                fontSize: 10, fontWeight: 700, cursor: "pointer",
-              }}
-            >
-              {params.bgMotion ? <Pause size={10} /> : <Play size={10} />}
-              Motion
-            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <button
+                onClick={() => update("bgMotion", !params.bgMotion)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 6, padding: "4px 12px", borderRadius: 9999,
+                  border: "1px solid",
+                  borderColor: params.bgMotion ? "rgba(52,211,153,0.4)" : "rgba(255,255,255,0.08)",
+                  background: params.bgMotion ? "rgba(52,211,153,0.12)" : "rgba(255,255,255,0.03)",
+                  color: params.bgMotion ? "#34d399" : "rgba(255,255,255,0.4)",
+                  fontSize: 10, fontWeight: 700, cursor: "pointer", flexShrink: 0,
+                }}
+              >
+                {params.bgMotion ? <Pause size={10} /> : <Play size={10} />}
+                Motion
+              </button>
+              {params.bgMotion && (
+                <div style={{ width: 100 }}>
+                  <Slider
+                    label="Speed"
+                    value={params.bgMotionSpeed}
+                    display={`${params.bgMotionSpeed}s`}
+                    min={3}
+                    max={30}
+                    step={1}
+                    onChange={(v) => update("bgMotionSpeed", v)}
+                  />
+                </div>
+              )}
+            </div>
           </div>
           {renderImagePicker("stackBgImage", params.stackBgImage, (v) => update("stackBgImage", v), "Grad")}
         </div>

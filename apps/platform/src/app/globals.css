@@ -284,13 +284,17 @@
   will-change: transform, opacity;
 }
 
-/* ── Glass Lab: slow background drift for testing refraction ──── */
+/* ── Glass Lab: background drift animation (Ken Burns effect) ─── */
+/* Scale 1.35 = 35% overflow. Translate up to 12% in each direction
+   so the image pans across ~80% of its total area over the cycle.
+   Duration is overridden inline via animationDuration from GlassParams. */
 @keyframes glass-lab-drift {
-  0%   { transform: scale(1.15) translate(0%, 0%); }
-  25%  { transform: scale(1.15) translate(-3%, 2%); }
-  50%  { transform: scale(1.15) translate(2%, -3%); }
-  75%  { transform: scale(1.15) translate(-2%, -1%); }
-  100% { transform: scale(1.15) translate(0%, 0%); }
+  0%   { transform: scale(1.35) translate(0%, 0%); }
+  20%  { transform: scale(1.35) translate(-10%, 6%); }
+  45%  { transform: scale(1.35) translate(8%, -10%); }
+  70%  { transform: scale(1.35) translate(-6%, -8%); }
+  90%  { transform: scale(1.35) translate(10%, 4%); }
+  100% { transform: scale(1.35) translate(0%, 0%); }
 }
 .glass-lab-drift {
   animation: glass-lab-drift 12s ease-in-out infinite;
