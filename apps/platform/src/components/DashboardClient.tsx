@@ -465,13 +465,15 @@ export function DashboardClient({
   const expandCard = useCallback((id: string) => {
     if (expand) return
     const bentoEl = bentoGridRef.current
-    const cardEl = cardRefs.current[id]
+    // Use the outer proximity wrapper (bentoCardRefs) for position — it owns the
+    // absolute grid placement. The inner cardRefs div has inset:0 so offset would be 0.
+    const wrapperEl = bentoCardRefs.current.get(id)
     const activeEl = activeViewRef.current
-    if (!bentoEl || !cardEl || !activeEl) return
+    if (!bentoEl || !wrapperEl || !activeEl) return
 
     const origin = {
-      top: cardEl.offsetTop, left: cardEl.offsetLeft,
-      width: cardEl.offsetWidth, height: cardEl.offsetHeight,
+      top: wrapperEl.offsetTop, left: wrapperEl.offsetLeft,
+      width: wrapperEl.offsetWidth, height: wrapperEl.offsetHeight,
     }
     const bentoRect = bentoEl.getBoundingClientRect()
     const activeRect = activeEl.getBoundingClientRect()
