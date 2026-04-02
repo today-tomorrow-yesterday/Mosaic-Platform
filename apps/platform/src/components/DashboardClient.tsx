@@ -11,69 +11,108 @@ import type { GlassParams } from './GlassLab'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-// Deep indigo-to-near-black — used as the solid fill for chrome cutout SVGs and panels.
-// Must be close to the gradient's top-corner colour so the chrome masks blend.
-const BG = '#0c0b18'
-const BASE_DUR = 300
-const MAX_EXTRA = 350
-const EXPAND_DUR = 500
+/** Chrome panel fill color — deep indigo matching the page gradient's darkest corner
+ *  so the chrome cutout SVGs blend seamlessly into the background. */
+const CHROME_BG = '#0c0b18'
+
+/** Stack swipe animation: base duration (ms) + distance-scaled bonus for natural pacing. */
+const SWIPE_BASE_DURATION_MS = 300
+const SWIPE_MAX_EXTRA_MS = 350
+
+/** Bento card expand/collapse: fallback duration when no expand state is active. */
+const CARD_EXPAND_FALLBACK_MS = 500
+
+/** Profile stack: rotation angles for the "scattered paper" effect on stacked cards.
+ *  Position 0 (front) = 0°, position 1 = slight tilt, position 2 = more tilt.
+ *  Creates organic depth — cards un-rotate as they transition to front. */
+const STACK_ROTATION_DEG = { front: 0, middle: 2, back: 3.5 }
+
+/** Profile stack: left offset (px) to pull stacked cards inward, preventing edge overflow. */
+const STACK_INSET_PX = { middle: 11, back: 16 }
+
+/** Proximity Hover Engine: edge-distance detection radius (px) and max scale/lift values.
+ *  Uses power-1.5 easing curve for organic ramp-up (see specimen diagnostics pattern). */
+const PROXIMITY_CONFIG = {
+  triggerDistancePx: 150,    // how far from a card's bounding box the effect begins
+  maxScaleIncrease: 0.02,    // 1.02 at closest approach
+  maxLiftPx: -4,             // 4px upward lift at closest approach
+  easingPower: 1.5,          // power curve for smooth organic ramp
+}
+
+/** Shared easing curve — smooth ease-out with no spring/overshoot. */
+const EASE_SMOOTH = 'cubic-bezier(0.25, 0.1, 0.25, 1)'
+
+/** Transition durations for interactive states. */
+const HOVER_TRANSITION_MS = 300
+const STACK_TRANSITION_MS = 400
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+/** A user profile rendered as a card in the profile stack (Trey, Sarah, Family). */
 type Profile = {
   id: string
   name: string
-  greetingColor: string
-  avatar?: string
+  greetingColor: string           // accent dot color for the greeting line
+  avatar?: string                 // Clerk user image URL
   icon?: React.ComponentType<{ size?: number; color?: string }>
-  gradStart: string
+  gradStart: string               // 3-stop gradient background
   gradMid: string
   gradEnd: string
-  baseColor: string
+  baseColor: string               // solid fallback used as card backgroundColor
 }
 
+/** A visual clone created during the "swipe-out" animation when switching profiles. */
 type SwipingClone = Profile & { _cloneIdx: number }
 
+/**
+ * Bento card expand lifecycle — a 5-phase state machine:
+ *   locked     → card pinned at origin, waiting for browser to paint
+ *   expanding  → animating from origin to full-screen target
+ *   open       → fully expanded, content visible
+ *   collapsing → animating back from target to origin
+ *   settling   → final frame before unmounting expand state
+ */
 type ExpandPhase = 'locked' | 'expanding' | 'open' | 'collapsing' | 'settling'
+
+type CardRect = { top: number; left: number; width: number; height: number }
 
 type ExpandState = {
   id: string
   phase: ExpandPhase
-  origin: { top: number; left: number; width: number; height: number }
-  target: { top: number; left: number; width: number; height: number }
-  dur: number
+  origin: CardRect    // the card's resting position in the bento grid
+  target: CardRect    // the full-screen position to expand into
+  dur: number         // distance-scaled animation duration
 }
 
+/** One of the four bento grid app cards (Home, Calendar, Budget, Baby). */
 type BentoCard = {
   id: string
   label: string
-  bgColor: string
-  borderColor: string
+  bgColor: string                  // icon badge background
+  borderColor: string              // icon badge border
   icon: React.ComponentType<{ size?: number; color?: string }>
   iconColor: string
-  glassTint: string   // accent color at very low opacity for the glass tint
-  pos: React.CSSProperties
-  href: string
-  activities: string[]
+  glassTint: string                // accent color at very low opacity for the glass surface
+  pos: React.CSSProperties         // CSS grid position (top/left/bottom/right)
+  href: string                     // cross-app navigation URL
+  activities: string[]             // placeholder activity items for the expanded view
   statusLabel: string
   statusValue: string
-  illus: () => React.ReactNode
+  illus: () => React.ReactNode     // decorative doodle illustration
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function calcDur(
-  pos: { top: number; left: number; width: number; height: number },
-  ow: number,
-  oh: number,
-): number {
+/** Calculate distance-proportional animation duration for bento card expand/collapse.
+ *  Cards farther from the center take slightly longer, creating natural pacing. */
+function calcExpandDuration(cardRect: CardRect, viewportW: number, viewportH: number): number {
   const maxDist = Math.max(
-    pos.left,
-    ow - (pos.left + pos.width),
-    pos.top,
-    oh - (pos.top + pos.height),
+    cardRect.left,
+    viewportW - (cardRect.left + cardRect.width),
+    cardRect.top,
+    viewportH - (cardRect.top + cardRect.height),
   )
-  return BASE_DUR + (maxDist / Math.max(ow, oh)) * MAX_EXTRA
+  return SWIPE_BASE_DURATION_MS + (maxDist / Math.max(viewportW, viewportH)) * SWIPE_MAX_EXTRA_MS
 }
 
 function getGreeting(): string {
@@ -86,9 +125,10 @@ function getDateStr(): string {
 }
 
 // ── SvgCorner ─────────────────────────────────────────────────────────────────
-
+/** Concave corner mask — fills the gap between the chrome panel's rounded edge
+ *  and the profile card's border-radius. Prevents background bleed-through. */
 function SvgCorner({
-  position, rotation = 0, color = BG, size = 28,
+  position, rotation = 0, color = CHROME_BG, size = 28,
 }: {
   position: React.CSSProperties
   rotation?: number
@@ -375,27 +415,36 @@ export function DashboardClient({
     setDateStr(getDateStr())
   }, [])
 
-  // ── Proximity Hover Engine ──────────────────────────────────────────────────
-  // Mirrors the specimen diagnostics pattern: onMouseMove on the outermost div,
-  // refs stored in a Map, CSS variables set via style.setProperty, CSS class
-  // drives the transform. No React state on mouse move = zero re-renders.
-  const handleBentoProximity = useCallback((e: React.MouseEvent) => {
+  // ── Proximity Hover Engine (spotlight falloff) ──────────────────────────────
+  //
+  // UX pattern: "proximity-aware focus state" — cards respond to cursor intent
+  // before the user commits to a hover, creating a magnetic pull effect.
+  //
+  // Architecture (ported from specimen diagnostics):
+  //   1. onMouseMove on the outermost page div (not on cards — absolute children eat events)
+  //   2. Card DOM nodes stored in a useRef(Map) — no React state on mouse move = zero re-renders
+  //   3. Distance from cursor to each card's bounding box edge via getBoundingClientRect()
+  //   4. CSS variables (--prox-scale, --prox-y) set directly via node.style.setProperty()
+  //   5. CSS class .bento-prox-container drives the transform with 0.1s linear interpolation
+  //
+  const calculateProximityHoverEffects = useCallback((e: React.MouseEvent) => {
     if (expand) return
-    const MAX_DIST = 150
-    const MAX_SCALE = 0.02
-    const MAX_Y = -4
+    const { triggerDistancePx, maxScaleIncrease, maxLiftPx, easingPower } = PROXIMITY_CONFIG
 
     bentoCardRefs.current.forEach((node) => {
       if (!node) return
       const rect = node.getBoundingClientRect()
+      // Distance to bounding box EDGE (0 when cursor is inside the card)
       const dx = Math.max(rect.left - e.clientX, 0, e.clientX - rect.right)
       const dy = Math.max(rect.top - e.clientY, 0, e.clientY - rect.bottom)
-      const dist = Math.hypot(dx, dy)
+      const edgeDist = Math.hypot(dx, dy)
 
-      if (dist < MAX_DIST) {
-        const intensity = Math.pow(1 - dist / MAX_DIST, 1.5)
-        node.style.setProperty('--prox-scale', String(1 + MAX_SCALE * intensity))
-        node.style.setProperty('--prox-y', `${MAX_Y * intensity}px`)
+      if (edgeDist < triggerDistancePx) {
+        // Normalize 0→1 (1 = touching/inside, 0 = at trigger boundary)
+        // Power curve creates organic, non-linear ramp — the "secret sauce" for premium feel
+        const intensity = Math.pow(1 - edgeDist / triggerDistancePx, easingPower)
+        node.style.setProperty('--prox-scale', String(1 + maxScaleIncrease * intensity))
+        node.style.setProperty('--prox-y', `${maxLiftPx * intensity}px`)
       } else {
         node.style.setProperty('--prox-scale', '1')
         node.style.setProperty('--prox-y', '0px')
@@ -403,7 +452,8 @@ export function DashboardClient({
     })
   }, [expand])
 
-  const resetBentoProximity = useCallback(() => {
+  /** Reset all cards to resting state when cursor leaves the page container. */
+  const resetProximityHoverEffects = useCallback(() => {
     bentoCardRefs.current.forEach((node) => {
       if (!node) return
       node.style.setProperty('--prox-scale', '1')
@@ -431,7 +481,7 @@ export function DashboardClient({
       width: activeRect.width,
       height: activeRect.height,
     }
-    const dur = calcDur(origin, activeRect.width, activeRect.height)
+    const dur = calcExpandDuration(origin, activeRect.width, activeRect.height)
     setHoveredCard(null)
     setExpand({ id, phase: 'locked', origin, target, dur })
   }, [expand])
@@ -480,31 +530,39 @@ export function DashboardClient({
     setExpand(prev => prev ? { ...prev, phase: 'collapsing', origin: freshOrigin } : null)
   }, [expand])
 
-  const handleAdvance = (targetId: string) => {
+  /** Advance the profile stack — swipes the current front card(s) off-screen
+   *  and promotes the target profile to the front position.
+   *  Creates visual clones of outgoing cards for the swipe-out animation. */
+  const advanceStackToProfile = (targetId: string) => {
     if (isAnimating || expand) return
     const targetIndex = order.indexOf(targetId)
     if (targetIndex <= 0) return
     setIsAnimating(true)
     const idsToSwipe = order.slice(0, targetIndex)
-    const clones: SwipingClone[] = idsToSwipe.map((id, idx) => ({
+    const swipeClones: SwipingClone[] = idsToSwipe.map((id, idx) => ({
       ...profiles.find(p => p.id === id)!,
       _cloneIdx: idx,
     }))
-    setSwipingClones(clones)
+    setSwipingClones(swipeClones)
+    // Reorder: target profile moves to front, swiped profiles go to back
     setOrder(prev => [...prev.slice(targetIndex), ...prev.slice(0, targetIndex)])
+    // Disable transitions on swiped cards so they teleport to back position instantly
     setNoTransitionIds(idsToSwipe)
     setTeleportingIds(idsToSwipe)
+    // Re-enable transitions on the next frame so the new front card animates in
     requestAnimationFrame(() => {
       setNoTransitionIds([])
       setTeleportingIds([])
     })
+    // Clean up clones after the swipe animation completes
     setTimeout(() => {
       setSwipingClones([])
       setIsAnimating(false)
-    }, 400 + (clones.length - 1) * 60)
+    }, STACK_TRANSITION_MS + (swipeClones.length - 1) * 60)
   }
 
-  const handleReset = (e: React.MouseEvent) => {
+  /** Reset the stack to the primary profile (instant, no animation). */
+  const resetStackToPrimary = (e: React.MouseEvent) => {
     e.stopPropagation()
     if (order[0] === 'primary' || isAnimating) return
     setNoTransitionIds(['all'])
@@ -515,70 +573,86 @@ export function DashboardClient({
   const isExpanding = expand && (expand.phase === 'expanding' || expand.phase === 'open')
   const isHoveringAnyCard = !!hoveredCard && !expand
 
-  // ── Render a profile card (shared between real + clone) ─────────────────────
-
+  // ── Profile Stack Renderer ──────────────────────────────────────────────────
+  //
+  // Renders a single profile card in the stack. Called for:
+  //   - Real cards (position 0 = front, 1 = first behind, 2 = second behind)
+  //   - Swipe clones (visual copies that animate off-screen during profile switch)
+  //
+  // The stack uses a "scattered paper" metaphor — stacked cards are slightly
+  // rotated (STACK_ROTATION_DEG) and inset (STACK_INSET_PX) to create organic
+  // depth. When a stacked card transitions to front, it un-rotates and expands
+  // simultaneously with the outgoing card's swipe-out animation.
+  //
   const renderProfileCard = (profile: Profile | SwipingClone, isClone = false): React.ReactElement => {
-    const _cloneIdx = (profile as SwipingClone)._cloneIdx ?? 0
-    const position = order.indexOf(profile.id)
+    const cloneIndex = (profile as SwipingClone)._cloneIdx ?? 0
+    const stackPosition = order.indexOf(profile.id)
     const isTeleporting = teleportingIds.includes(profile.id) && !isClone
     const isNoTransition = noTransitionIds.includes('all') || (noTransitionIds.includes(profile.id) && !isClone)
-    const isActiveView = position === 0 || isClone
-    const stackWidth = 100
+    const isActiveView = stackPosition === 0 || isClone
+    const stackSliceWidth = 100  // px — visible width of a stacked card's spine
     const stackOffset = Math.min(55, Math.max(35, containerW * 0.04))
-    const isFrontCard = position === 0 && !isClone
+    const isFrontCard = stackPosition === 0 && !isClone
 
-    const cardStyle: React.CSSProperties = {
+    // Profile card positioning — each stack position has its own transform, scale, and rotation.
+    const stackTransition = `transform ${STACK_TRANSITION_MS}ms ${EASE_SMOOTH}, opacity ${STACK_TRANSITION_MS}ms ${EASE_SMOOTH}, width ${STACK_TRANSITION_MS}ms ${EASE_SMOOTH}, left ${STACK_TRANSITION_MS}ms ${EASE_SMOOTH}, top ${STACK_TRANSITION_MS}ms ${EASE_SMOOTH}, bottom ${STACK_TRANSITION_MS}ms ${EASE_SMOOTH}`
+
+    const profileCardStyle: React.CSSProperties = {
       backgroundColor: profile.baseColor,
       position: 'absolute',
       borderRadius: 32,
       overflow: 'hidden',
       willChange: 'transform, opacity',
       transform: 'translateZ(0)',
-      ...(isClone && { width: activeWidth, left: 0, top: 0, bottom: 0, zIndex: 50 - _cloneIdx }),
+      // Clone: full-width at front, stacked behind other clones
+      ...(isClone && { width: activeWidth, left: 0, top: 0, bottom: 0, zIndex: 50 - cloneIndex }),
+      // Teleporting: instantly moved to back position (no transition) before re-enabling animation
       ...(!isClone && isTeleporting && {
-        width: stackWidth, left: containerW - stackWidth, top: 48, bottom: 48, zIndex: 5,
+        width: stackSliceWidth, left: containerW - stackSliceWidth, top: 48, bottom: 48, zIndex: 5,
         transform: 'translateX(40px) scale(0.85) translateZ(0)', opacity: 0, pointerEvents: 'none',
       }),
-      ...(!isClone && !isTeleporting && position === 0 && {
+      // Front card: full-width, no rotation, deep shadow
+      ...(!isClone && !isTeleporting && stackPosition === 0 && {
         width: activeWidth, left: 0, top: 0, bottom: 0, zIndex: 30,
-        transform: 'translateX(0) scale(1) rotate(0deg) translateZ(0)', opacity: 1,
+        transform: `translateX(0) scale(1) rotate(${STACK_ROTATION_DEG.front}deg) translateZ(0)`, opacity: 1,
         boxShadow: '-20px 0 60px rgba(0,0,0,0.8)',
       }),
-      ...(!isClone && !isTeleporting && position === 1 && {
-        width: stackWidth, left: containerW - stackOffset - stackWidth - 11, top: 24, bottom: 24, zIndex: 20,
-        transform: 'translateX(0) scale(0.96) rotate(2deg) translateZ(0)', opacity: 1,
+      // Middle stack: slight tilt + scale down (scattered paper effect)
+      ...(!isClone && !isTeleporting && stackPosition === 1 && {
+        width: stackSliceWidth, left: containerW - stackOffset - stackSliceWidth - STACK_INSET_PX.middle, top: 24, bottom: 24, zIndex: 20,
+        transform: `translateX(0) scale(0.96) rotate(${STACK_ROTATION_DEG.middle}deg) translateZ(0)`, opacity: 1,
         boxShadow: '-10px 0 40px rgba(0,0,0,0.6)', cursor: 'pointer',
       }),
-      ...(!isClone && !isTeleporting && position === 2 && {
-        width: stackWidth, left: containerW - stackWidth - 16, top: 48, bottom: 48, zIndex: 10,
-        transform: 'translateX(0) scale(0.92) rotate(3.5deg) translateZ(0)', opacity: 1, cursor: 'pointer',
+      // Back stack: more tilt + more scale down
+      ...(!isClone && !isTeleporting && stackPosition === 2 && {
+        width: stackSliceWidth, left: containerW - stackSliceWidth - STACK_INSET_PX.back, top: 48, bottom: 48, zIndex: 10,
+        transform: `translateX(0) scale(0.92) rotate(${STACK_ROTATION_DEG.back}deg) translateZ(0)`, opacity: 1, cursor: 'pointer',
       }),
-      ...(!isNoTransition && !isClone && { transition: 'transform 400ms cubic-bezier(0.25, 0.1, 0.25, 1), opacity 400ms cubic-bezier(0.25, 0.1, 0.25, 1), width 400ms cubic-bezier(0.25, 0.1, 0.25, 1), left 400ms cubic-bezier(0.25, 0.1, 0.25, 1), top 400ms cubic-bezier(0.25, 0.1, 0.25, 1), bottom 400ms cubic-bezier(0.25, 0.1, 0.25, 1)' }),
+      ...(!isNoTransition && !isClone && { transition: stackTransition }),
     }
 
-    // Use the actual expand duration (dynamic by card distance) so chrome exit/entry
-    // stays in sync with the card morph animation rather than a fixed constant.
-    const motionDur = expand?.dur ?? EXPAND_DUR
-    const chromeSlide = isExpanding ? -80 : isHoveringAnyCard ? -60 : 0
-    const chromeOpacity = isExpanding ? 0 : isHoveringAnyCard ? 0.2 : 1
-    const hoverEase = 'cubic-bezier(0.25, 0.1, 0.25, 1)'
-    const hoverDur = '300ms'
-    const chromeTrans = `transform ${isHoveringAnyCard && !isExpanding ? hoverDur : `${motionDur * 0.6}ms`} ${hoverEase}, opacity ${isHoveringAnyCard && !isExpanding ? hoverDur : `${motionDur * 0.4}ms`} ease`
-    const greetingSlide = isExpanding ? -40 : 0
+    // Chrome panel slide — hides header/greeting when a bento card is expanding to full-screen.
+    // Duration is synced to the expand animation for coordinated motion.
+    const expandDur = expand?.dur ?? CARD_EXPAND_FALLBACK_MS
+    const chromeSlideY = isExpanding ? -80 : 0
+    const chromeOpacity = isExpanding ? 0 : 1
+    const chromeTransition = `transform ${expandDur * 0.6}ms ${EASE_SMOOTH}, opacity ${expandDur * 0.4}ms ease`
+    const greetingSlideY = isExpanding ? -40 : 0
     const greetingOpacity = isExpanding ? 0 : 1
-    const greetingTrans = `transform ${isHoveringAnyCard && !isExpanding ? hoverDur : `${motionDur * 0.5}ms`} ${hoverEase}, opacity ${isHoveringAnyCard && !isExpanding ? hoverDur : `${motionDur * 0.3}ms`} ease`
+    const greetingTransition = `transform ${expandDur * 0.5}ms ${EASE_SMOOTH}, opacity ${expandDur * 0.3}ms ease`
 
-    const cloneFadeClass = isClone ? 'fade-out-midway' : ''
-    const cloneAnimStyle: React.CSSProperties = isClone ? { animationDelay: `${_cloneIdx * 80}ms` } : {}
+    // Clone swipe animation — visual copy of the outgoing profile card
+    const swipeOutFadeClass = isClone ? 'fade-out-midway' : ''
+    const swipeOutDelayStyle: React.CSSProperties = isClone ? { animationDelay: `${cloneIndex * 80}ms` } : {}
 
     return (
       <div
         key={isClone ? `clone-${profile.id}` : profile.id}
         className={`group ${isClone ? 'swipe-out-anim' : ''}`}
-        style={cardStyle}
+        style={profileCardStyle}
         onClick={() => {
-          if (!isClone && position > 0 && teleportingIds.length === 0 && !expand) {
-            handleAdvance(profile.id)
+          if (!isClone && stackPosition > 0 && teleportingIds.length === 0 && !expand) {
+            advanceStackToProfile(profile.id)
           }
         }}
       >
@@ -603,7 +677,7 @@ export function DashboardClient({
             />
           </div>
         )}
-        <div className={`absolute inset-0 z-10 transition-colors duration-300 pointer-events-none ${glassParams.stackBgImage !== null ? 'bg-black/15' : 'bg-black/40'} ${position > 0 ? 'group-hover:bg-black/10' : ''}`} />
+        <div className={`absolute inset-0 z-10 transition-colors duration-300 pointer-events-none ${glassParams.stackBgImage !== null ? 'bg-black/15' : 'bg-black/40'} ${stackPosition > 0 ? 'group-hover:bg-black/10' : ''}`} />
 
         {/* ── Spine (visible when stacked) ── */}
         <div style={{
@@ -636,19 +710,19 @@ export function DashboardClient({
         >
           {/* Top-left chrome */}
           <div
-            className={cloneFadeClass}
+            className={swipeOutFadeClass}
             style={{
-              position: 'absolute', top: -1, left: -1, backgroundColor: BG, borderBottomRightRadius: 28,
+              position: 'absolute', top: -1, left: -1, backgroundColor: CHROME_BG, borderBottomRightRadius: 28,
               zIndex: 40, paddingLeft: 6, paddingBottom: 5,
-              transform: `translateY(${chromeSlide}px)`, opacity: chromeOpacity, transition: chromeTrans,
+              transform: `translateY(${chromeSlideY}px)`, opacity: chromeOpacity, transition: chromeTransition,
               pointerEvents: isExpanding ? 'none' : 'auto',
-              ...cloneAnimStyle,
+              ...swipeOutDelayStyle,
             }}
           >
             <SvgCorner position={{ top: 0, right: -28 }} rotation={0} />
             <SvgCorner position={{ bottom: -28, left: 0 }} rotation={0} />
             <div style={{ paddingTop: 24, paddingLeft: 32, paddingRight: 32, paddingBottom: 16, display: 'flex', alignItems: 'center', gap: 16 }}>
-              <div className="group/logo flex items-center gap-2 cursor-pointer" onClick={handleReset}>
+              <div className="group/logo flex items-center gap-2 cursor-pointer" onClick={resetStackToPrimary}>
                 <Hexagon size={22} color="#34d399" fill="rgba(52,211,153,0.2)" className="transition-transform duration-500 group-hover/logo:rotate-12" />
                 <span style={{ fontWeight: 700, fontSize: 17, color: 'white' }}>Mosaic</span>
               </div>
@@ -656,7 +730,7 @@ export function DashboardClient({
                 <>
                   <div style={{ width: 1, height: 20, backgroundColor: 'rgba(255,255,255,0.1)' }} />
                   <button
-                    onClick={handleReset}
+                    onClick={resetStackToPrimary}
                     style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 9999, backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.05)', color: '#d1d5db', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
                     className="hover:bg-white/10 hover:text-white transition-colors duration-200"
                   >
@@ -682,13 +756,13 @@ export function DashboardClient({
 
           {/* Top-right chrome */}
           <div
-            className={cloneFadeClass}
+            className={swipeOutFadeClass}
             style={{
-              position: 'absolute', top: -1, right: -1, backgroundColor: BG, borderBottomLeftRadius: 28,
+              position: 'absolute', top: -1, right: -1, backgroundColor: CHROME_BG, borderBottomLeftRadius: 28,
               zIndex: 40, paddingRight: 6, paddingBottom: 5,
-              transform: `translateY(${chromeSlide}px)`, opacity: chromeOpacity, transition: chromeTrans,
+              transform: `translateY(${chromeSlideY}px)`, opacity: chromeOpacity, transition: chromeTransition,
               pointerEvents: isExpanding ? 'none' : 'auto',
-              ...cloneAnimStyle,
+              ...swipeOutDelayStyle,
             }}
           >
             <SvgCorner position={{ top: 0, left: -28 }} rotation={90} />
@@ -712,13 +786,13 @@ export function DashboardClient({
           }}>
             {/* Greeting + name */}
             <div
-              className={cloneFadeClass}
+              className={swipeOutFadeClass}
               style={{
                 marginTop: 80, marginBottom: 28,
-                transform: `translateY(${greetingSlide}px)`,
+                transform: `translateY(${greetingSlideY}px)`,
                 opacity: greetingOpacity,
-                transition: greetingTrans,
-                ...cloneAnimStyle,
+                transition: greetingTransition,
+                ...swipeOutDelayStyle,
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.2em', color: '#9ca3af', marginBottom: 18 }}>
@@ -1131,12 +1205,12 @@ export function DashboardClient({
       `}</style>
 
       <div
-        onMouseMove={handleBentoProximity}
-        onMouseLeave={resetBentoProximity}
+        onMouseMove={calculateProximityHoverEffects}
+        onMouseLeave={resetProximityHoverEffects}
         style={{
         minHeight: '100vh', width: '100%', color: 'white',
         // Radial bloom of deep indigo at the top, fading to near-black at the bottom.
-        // The chrome cutout panels use BG (#0c0b18) which matches the top-corner of this gradient.
+        // The chrome cutout panels use CHROME_BG (#0c0b18) which matches the top-corner of this gradient.
         background: 'radial-gradient(ellipse 120% 80% at 50% -10%, #16133a 0%, #0c0b18 38%, #07060e 70%, #060509 100%)',
         display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden',
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
