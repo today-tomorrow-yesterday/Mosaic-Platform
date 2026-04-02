@@ -359,7 +359,7 @@ export function DashboardClient({
   const [noTransitionIds, setNoTransitionIds] = useState<string[]>([])
   const [teleportingIds, setTeleportingIds] = useState<string[]>([])
   const [hoveredCard, setHoveredCard] = useState<string | null>(null)
-  const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null)
+  const bentoCardRefs = useRef(new Map<string, HTMLDivElement>())
   const [glassParams, setGlassParams] = useState<GlassParams>(DEFAULT_GLASS)
   const [labOpen, setLabOpen] = useState(false)
   const [greeting, setGreeting] = useState('Good Evening')
@@ -373,6 +373,43 @@ export function DashboardClient({
   useEffect(() => {
     setGreeting(getGreeting())
     setDateStr(getDateStr())
+  }, [])
+
+  // ── Proximity Hover Engine ──────────────────────────────────────────────────
+  // Mirrors the specimen diagnostics pattern: onMouseMove on the outermost div,
+  // refs stored in a Map, CSS variables set via style.setProperty, CSS class
+  // drives the transform. No React state on mouse move = zero re-renders.
+  const handleBentoProximity = useCallback((e: React.MouseEvent) => {
+    if (expand) return
+    const MAX_DIST = 150
+    const MAX_SCALE = 0.02
+    const MAX_Y = -4
+
+    bentoCardRefs.current.forEach((node) => {
+      if (!node) return
+      const rect = node.getBoundingClientRect()
+      const dx = Math.max(rect.left - e.clientX, 0, e.clientX - rect.right)
+      const dy = Math.max(rect.top - e.clientY, 0, e.clientY - rect.bottom)
+      const dist = Math.hypot(dx, dy)
+
+      if (dist < MAX_DIST) {
+        const intensity = Math.pow(1 - dist / MAX_DIST, 1.5)
+        node.style.setProperty('--prox-scale', String(1 + MAX_SCALE * intensity))
+        node.style.setProperty('--prox-y', `${MAX_Y * intensity}px`)
+      } else {
+        node.style.setProperty('--prox-scale', '1')
+        node.style.setProperty('--prox-y', '0px')
+      }
+    })
+  }, [expand])
+
+  const resetBentoProximity = useCallback(() => {
+    bentoCardRefs.current.forEach((node) => {
+      if (!node) return
+      node.style.setProperty('--prox-scale', '1')
+      node.style.setProperty('--prox-y', '0px')
+    })
+    setHoveredCard(null)
   }, [])
 
   const expandCard = useCallback((id: string) => {
@@ -715,13 +752,6 @@ export function DashboardClient({
               <div
                 ref={isFrontCard ? bentoGridRef : undefined}
                 style={{ flex: 1, position: 'relative', minHeight: 280, overflow: 'visible' }}
-                onMouseMove={isFrontCard && !expand ? (e) => {
-                  const grid = bentoGridRef.current
-                  if (!grid) return
-                  const rect = grid.getBoundingClientRect()
-                  setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top })
-                } : undefined}
-                onMouseLeave={isFrontCard ? () => { setMousePos(null); setHoveredCard(null) } : undefined}
               >
                 {/* Invisible probes track original card positions for collapse animation */}
                 {isFrontCard && BENTO_CARDS.map(card => (
@@ -768,72 +798,33 @@ export function DashboardClient({
 
                   const isHovered = hoveredCard === card.id && !expand
 
-                  // Proximity-based sibling dimming (spotlight falloff):
-                  // Find which card the mouse is closest to. As the mouse approaches
-                  // that card's edge (within 50px), dim all OTHER cards proportionally.
-                  let proximityDim = 0
-                  if (mousePos && !expand && isFrontCard) {
-                    // Find distance from mouse to THIS card's edge
-                    const thisEl = cardRefs.current[card.id]
-                    if (thisEl) {
-                      const dx = Math.max(thisEl.offsetLeft - mousePos.x, 0, mousePos.x - (thisEl.offsetLeft + thisEl.offsetWidth))
-                      const dy = Math.max(thisEl.offsetTop - mousePos.y, 0, mousePos.y - (thisEl.offsetTop + thisEl.offsetHeight))
-                      const distToThis = Math.sqrt(dx * dx + dy * dy)
-
-                      if (distToThis === 0) {
-                        // Mouse is INSIDE this card — no dim on self
-                        proximityDim = 0
-                      } else {
-                        // Mouse is outside this card — check if it's close to ANY other card
-                        // If so, dim this one proportionally
-                        let minDistToAny = Infinity
-                        for (const other of BENTO_CARDS) {
-                          if (other.id === card.id) continue
-                          const el = cardRefs.current[other.id]
-                          if (!el) continue
-                          const odx = Math.max(el.offsetLeft - mousePos.x, 0, mousePos.x - (el.offsetLeft + el.offsetWidth))
-                          const ody = Math.max(el.offsetTop - mousePos.y, 0, mousePos.y - (el.offsetTop + el.offsetHeight))
-                          minDistToAny = Math.min(minDistToAny, Math.sqrt(odx * odx + ody * ody))
-                        }
-                        // If mouse is inside another card (dist=0), full dim.
-                        // If mouse is within 50px of another card's edge, gradual dim.
-                        const rampPx = 50
-                        if (minDistToAny < rampPx) {
-                          proximityDim = (1 - minDistToAny / rampPx) * 0.35
-                        }
-                      }
-                    }
-                  }
-                  const isOtherHovered = proximityDim > 0
-
                   return (
                     <div
                       key={card.id}
+                      ref={(el) => {
+                        if (isFrontCard) {
+                          if (el) bentoCardRefs.current.set(card.id, el)
+                          else bentoCardRefs.current.delete(card.id)
+                        }
+                      }}
+                      className="bento-prox-container"
+                      style={{ position: 'absolute', ...posStyle, zIndex: zIdx }}
+                    >
+                    <div
                       ref={isFrontCard ? (el => { cardRefs.current[card.id] = el }) : undefined}
                       onClick={() => { if (!expand) expandCard(card.id) }}
                       onMouseEnter={() => { if (!expand) setHoveredCard(card.id) }}
                       onMouseLeave={() => setHoveredCard(null)}
-                      onMouseMove={isFrontCard && !expand ? (e) => {
-                        const grid = bentoGridRef.current
-                        if (!grid) return
-                        const rect = grid.getBoundingClientRect()
-                        setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top })
-                      } : undefined}
                       style={{
                         position: 'absolute',
-                        ...posStyle,
+                        inset: 0,
                         borderRadius: borderRad,
                         overflow: 'hidden',
                         display: 'flex', flexDirection: 'column',
                         cursor: isThis ? 'default' : 'pointer',
                         background: `linear-gradient(145deg, ${card.glassTint} 0%, rgba(8,6,20,0.18) 100%)`,
                         boxShadow: '0 20px 60px rgba(0,0,0,0.6), 0 4px 16px rgba(0,0,0,0.35)',
-                        zIndex: zIdx,
-                        transition: transitionStr !== 'none'
-                          ? `${transitionStr}, transform 300ms cubic-bezier(0.25, 0.1, 0.25, 1)`
-                          : 'transform 300ms cubic-bezier(0.25, 0.1, 0.25, 1)',
-                        willChange: 'transform',
-                        transform: isHovered ? 'scale(1.02) translateZ(0)' : isOtherHovered ? 'scale(0.98) translateZ(0)' : 'translateZ(0)',
+                        transition: transitionStr,
                         backfaceVisibility: 'hidden',
                       }}
                     >
@@ -898,11 +889,11 @@ export function DashboardClient({
                         animationPlayState: isMounted ? 'paused' : 'running',
                       }} />
 
-                      {/* Sibling dim overlay — proximity-based gradual darkening */}
+                      {/* Sibling dim overlay on hover */}
                       <div style={{
                         position: 'absolute', inset: 0, zIndex: 7, backgroundColor: 'black',
-                        opacity: proximityDim,
-                        transition: 'opacity 150ms ease', pointerEvents: 'none',
+                        opacity: (hoveredCard && hoveredCard !== card.id && !expand) ? 0.35 : 0,
+                        transition: 'opacity 300ms ease', pointerEvents: 'none',
                       }} />
 
                       {/* Dark overlay when expanding */}
@@ -1063,6 +1054,7 @@ export function DashboardClient({
                         </div>
                       )}
                     </div>
+                    </div>
                   )
                 })}
               </div>
@@ -1124,10 +1116,19 @@ export function DashboardClient({
           85%      { opacity: 0; }
         }
 
+        .bento-prox-container {
+          transition: transform 0.1s linear;
+          will-change: transform;
+          transform: scale(var(--prox-scale, 1)) translateY(var(--prox-y, 0px));
+        }
+
         .no-underline { text-decoration: none; }
       `}</style>
 
-      <div style={{
+      <div
+        onMouseMove={handleBentoProximity}
+        onMouseLeave={resetBentoProximity}
+        style={{
         minHeight: '100vh', width: '100%', color: 'white',
         // Radial bloom of deep indigo at the top, fading to near-black at the bottom.
         // The chrome cutout panels use BG (#0c0b18) which matches the top-corner of this gradient.
