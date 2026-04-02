@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   description: "Your personal platform",
 }
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }): Promise<React.ReactElement> {
   const cookieStore = await cookies()
   const override = cookieStore.get("mosaic-season")?.value
   const season = getSeasonById(override)

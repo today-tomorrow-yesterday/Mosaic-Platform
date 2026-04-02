@@ -2,6 +2,3 @@ export type { IQueryable, SortDirection, ComparisonOperator } from "./IQueryable
 export type { ITranslator, UpsertOptions } from "./ITranslator"
 export { DbSet } from "./DbSet"
 export { BaseRepository } from "./BaseRepository"
-export { SelectBuilder } from "./builders/SelectBuilder"
-export { UpdateBuilder } from "./builders/UpdateBuilder"
-export { DeleteBuilder } from "./builders/DeleteBuilder"

@@ -37,6 +37,15 @@ export class DeleteBuilder<T> {
   }
 
   async execute(): Promise<void> {
+    const hasCondition =
+      this.state.conditions.length > 0 ||
+      this.state.whereIn.length > 0 ||
+      this.state.whereNot.length > 0
+    if (!hasCondition) {
+      throw new Error(
+        `[DbSet] delete on table "${this.state.table}" called with no conditions — this would affect every row. Add a .where() clause.`
+      )
+    }
     return this.translator.executeDelete(this.state)
   }
 }

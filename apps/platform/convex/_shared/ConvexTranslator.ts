@@ -1,8 +1,11 @@
 import type { GenericDatabaseReader, GenericDatabaseWriter, GenericDataModel } from "convex/server"
 import type { ITranslator, UpsertOptions, IQueryable } from "@mosaic/db"
 
-type Reader = GenericDatabaseReader<GenericDataModel>
-type Writer = GenericDatabaseWriter<GenericDataModel>
+// Use `any` so this translator is compatible with both empty and populated schemas
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Reader = GenericDatabaseReader<any>
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Writer = GenericDatabaseWriter<any>
 
 /**
  * ConvexTranslator — the ONLY place ctx.db appears in the platform app.
@@ -80,7 +83,8 @@ export class ConvexTranslator implements ITranslator {
   async executeInsert<T>(table: string, data: Omit<T, "_id" | "_creationTime">): Promise<T> {
     const writer = this.db as Writer
     const id = await writer.insert(table as any, data as any)
-    return { ...data, _id: id } as unknown as T
+    const record = await (this.db as Reader).get(id)
+    return record as unknown as T
   }
 
   async executeUpdate<T>(state: IQueryable<T>): Promise<void> {
@@ -90,8 +94,11 @@ export class ConvexTranslator implements ITranslator {
   }
 
   async executeUpdateReturning<T>(state: IQueryable<T>): Promise<T[]> {
-    await this.executeUpdate(state)
-    return this.executeSelect(state)
+    const writer = this.db as Writer
+    const records = await this.executeSelect(state)
+    const ids = records.map((r) => (r as any)._id)
+    await Promise.all(records.map((r) => writer.patch((r as any)._id, state.data as any)))
+    return Promise.all(ids.map((id) => (this.db as Reader).get(id))) as Promise<T[]>
   }
 
   async executeDelete<T>(state: IQueryable<T>): Promise<void> {

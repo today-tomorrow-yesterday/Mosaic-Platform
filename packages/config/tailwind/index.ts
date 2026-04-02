@@ -1,7 +1,6 @@
 import type { Config } from "tailwindcss"
 
 export const baseConfig: Partial<Config> = {
-  darkMode: ["class"],
   content: [
     "./src/**/*.{ts,tsx}",
     "../../packages/ui/src/**/*.{ts,tsx}",

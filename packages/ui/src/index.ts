@@ -4,7 +4,7 @@ export * from "./components/Badge"
 export * from "./components/ProgressBar"
 export * from "./components/StatCard"
 
-// shadcn/ui components
+// shadcn/ui components (canonical versions — custom Button/Card removed)
 export * from "./components/ui/accordion"
 export * from "./components/ui/button"
 export * from "./components/ui/card"

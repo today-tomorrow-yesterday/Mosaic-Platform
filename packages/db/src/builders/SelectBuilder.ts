@@ -94,10 +94,6 @@ export class SelectBuilder<T> {
     return this.translator.executeSelectFirst(this.state)
   }
 
-  async returnFirstOrNull(): Promise<T | null> {
-    return this.returnFirst()
-  }
-
   async returnCount(): Promise<number> {
     return this.translator.executeCount(this.state)
   }

@@ -1,4 +1,5 @@
 import * as React from "react"
+import { cn } from "../lib/utils"
 
 type BadgeVariant = "default" | "green" | "blue" | "orange" | "red" | "pink"
 
@@ -18,7 +19,7 @@ const variantMap: Record<BadgeVariant, string> = {
 
 export function Badge({ children, variant = "default" }: BadgeProps) {
   return (
-    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${variantMap[variant]}`}>
+    <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold", variantMap[variant])}>
       {children}
     </span>
   )

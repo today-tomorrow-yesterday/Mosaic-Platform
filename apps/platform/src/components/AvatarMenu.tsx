@@ -8,9 +8,9 @@ import { setSeasonOverride } from "@/app/actions"
 import { SEASON_META } from "@/lib/season"
 import type { SeasonId } from "@/lib/season"
 
-const SEASONS = Object.values(SEASON_META).map((m, i) => ({
-  ...m,
-  id: Object.keys(SEASON_META)[i] as SeasonId,
+const SEASONS = (Object.keys(SEASON_META) as SeasonId[]).map((id) => ({
+  id,
+  ...SEASON_META[id],
 }))
 
 interface Props {
@@ -77,17 +77,11 @@ export function AvatarMenu({ activeSeason }: Props) {
         onClick={() => setOpen((o) => !o)}
         aria-label="Open settings"
         aria-expanded={open}
-        className="block w-8 h-8 rounded-full overflow-hidden focus:outline-none transition-all duration-200"
+        className="block w-8 h-8 rounded-full overflow-hidden focus:outline-none transition-all duration-200 hover:[box-shadow:0_0_0_2px_var(--s-accent)]"
         style={{
           boxShadow: open
             ? "0 0 0 2.5px var(--s-accent)"
             : "0 0 0 2px transparent",
-        }}
-        onMouseEnter={(e) => {
-          if (!open) (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 0 2px var(--s-accent)"
-        }}
-        onMouseLeave={(e) => {
-          if (!open) (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 0 2px transparent"
         }}
       >
         {avatarUrl ? (

@@ -1,4 +1,5 @@
 import * as React from "react"
+import { cn } from "../lib/utils"
 
 interface StatCardProps {
   label: string
@@ -19,7 +20,7 @@ export function StatCard({ label, value, sub, accent = "default" }: StatCardProp
   return (
     <div className="bg-white rounded-2xl border border-zinc-200 px-5 py-4">
       <p className="text-xs font-semibold uppercase tracking-[0.12em] text-zinc-400 mb-1">{label}</p>
-      <p className={`text-3xl font-bold tracking-tight ${accentMap[accent]}`}>{value}</p>
+      <p className={cn("text-3xl font-bold tracking-tight", accentMap[accent])}>{value}</p>
       {sub && <p className="text-xs text-zinc-400 mt-1">{sub}</p>}
     </div>
   )

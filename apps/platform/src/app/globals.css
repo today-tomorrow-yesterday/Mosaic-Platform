@@ -45,6 +45,13 @@
 .animate-fade-up { animation: fade-up  0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
 .animate-fade-in { animation: fade-in  0.4s ease both; }
 
+/* ── Studio: typing dots ─────────────────────────────────────────── */
+@keyframes typing-dot {
+  0%, 60%, 100% { transform: translateY(0);    opacity: 0.4; }
+  30%           { transform: translateY(-4px); opacity: 1;   }
+}
+.animate-typing-dot { animation: typing-dot 1.2s ease-in-out infinite; }
+
 /* ── Bento grid — fixed row heights only on desktop ─────────────── */
 @media (min-width: 1024px) {
   .bento-grid {

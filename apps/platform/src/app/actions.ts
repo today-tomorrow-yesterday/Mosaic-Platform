@@ -11,7 +11,7 @@ export async function setSeasonOverride(season: SeasonId | "auto"): Promise<void
     cookieStore.set("mosaic-season", season, {
       maxAge: 60 * 60 * 24 * 365,
       path: "/",
-      httpOnly: false, // readable by client for display purposes
+      httpOnly: true,
     })
   }
 }
