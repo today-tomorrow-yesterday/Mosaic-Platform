@@ -527,8 +527,8 @@ export function DashboardClient({
     const hoverEase = 'cubic-bezier(0.25, 0.1, 0.25, 1)'
     const hoverDur = '300ms'
     const chromeTrans = `transform ${isHoveringAnyCard && !isExpanding ? hoverDur : `${motionDur * 0.6}ms`} ${hoverEase}, opacity ${isHoveringAnyCard && !isExpanding ? hoverDur : `${motionDur * 0.4}ms`} ease`
-    const greetingSlide = isExpanding ? -40 : isHoveringAnyCard ? -25 : 0
-    const greetingOpacity = isExpanding ? 0 : isHoveringAnyCard ? 0.3 : 1
+    const greetingSlide = isExpanding ? -40 : 0
+    const greetingOpacity = isExpanding ? 0 : 1
     const greetingTrans = `transform ${isHoveringAnyCard && !isExpanding ? hoverDur : `${motionDur * 0.5}ms`} ${hoverEase}, opacity ${isHoveringAnyCard && !isExpanding ? hoverDur : `${motionDur * 0.3}ms`} ease`
 
     const cloneFadeClass = isClone ? 'fade-out-midway' : ''
