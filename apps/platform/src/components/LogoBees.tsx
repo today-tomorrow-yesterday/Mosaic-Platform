@@ -213,11 +213,10 @@ export function LogoBees({ season }: Props) {
                 key={i}
                 cx={l.cx}
                 cy={l.cy}
-                r="1.4"
+                r="1.6"
                 fill={l.color}
                 style={{
                   animation: `xmas-blink ${l.dur} ease-in-out ${l.delay} infinite`,
-                  filter: `drop-shadow(0 0 1.5px ${l.color})`,
                 }}
               />
             ))}

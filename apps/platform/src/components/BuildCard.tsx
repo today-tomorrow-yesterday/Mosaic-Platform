@@ -9,7 +9,7 @@ export function BuildCard() {
       {/* ── Card ── */}
       <Link
         href="/studio"
-        className="group relative w-full text-left min-h-[220px] lg:min-h-0 rounded-[24px] flex flex-col overflow-hidden transition-all duration-300 hover:shadow-2xl hover:scale-[1.01] active:scale-[0.99] focus:outline-none animate-fade-up build-card"
+        className="group relative w-full text-left min-h-[220px] lg:min-h-0 rounded-[24px] flex flex-col overflow-hidden transition-transform duration-300 hover:scale-[1.01] active:scale-[0.99] focus:outline-none animate-fade-up build-card"
         style={{ animationDelay: "480ms" }}
         aria-label="Open AI Studio"
       >
@@ -22,7 +22,7 @@ export function BuildCard() {
           {/* Top row: icon + badge */}
           <div className="flex items-start justify-between">
             <div
-              className="w-11 h-11 flex items-center justify-center transition-all duration-300 group-hover:scale-110"
+              className="w-11 h-11 flex items-center justify-center transition-transform duration-300 group-hover:scale-110"
               style={{
                 borderRadius: "13px",
                 background: "var(--s-logo-bg)",
@@ -74,7 +74,7 @@ export function BuildCard() {
             </div>
 
             <div
-              className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 mb-1 transition-all duration-300 group-hover:scale-110"
+              className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 mb-1 transition-transform duration-300 group-hover:scale-110"
               style={{
                 background: "color-mix(in srgb, var(--s-accent) 12%, transparent)",
               }}

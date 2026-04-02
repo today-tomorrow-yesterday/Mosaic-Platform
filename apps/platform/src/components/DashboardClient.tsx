@@ -106,27 +106,6 @@ function SvgCorner({
   )
 }
 
-// ── Liquid glass displacement map ────────────────────────────────────────────
-// Pre-generated for bento card border-radius=32 (r = 32×2.5 = 80px in 1000-unit space).
-// RGB channels encode X/Y displacement direction; the blurred white rounded-rect
-// shape concentrates refraction at the glass edges — strongest near corners.
-const BENTO_GLASS_MAP_SVG = (() => {
-  const sz = 1000, m = 20, r = 80
-  const p = `M${m+r} ${m} L${sz-m-r} ${m} Q${sz-m} ${m} ${sz-m} ${m+r} L${sz-m} ${sz-m-r} Q${sz-m} ${sz-m} ${sz-m-r} ${sz-m} L${m+r} ${sz-m} Q${m} ${sz-m} ${m} ${sz-m-r} L${m} ${m+r} Q${m} ${m} ${m+r} ${m} Z`
-  const svg = [
-    `<svg width='${sz}' height='${sz}' xmlns='http://www.w3.org/2000/svg'>`,
-    `<filter id='b'><feGaussianBlur stdDeviation='15'/></filter>`,
-    `<linearGradient id='gx' x1='0' y1='0' x2='1' y2='0'><stop offset='0%' stop-color='red'/><stop offset='100%' stop-color='black'/></linearGradient>`,
-    `<linearGradient id='gy' x1='0' y1='0' x2='0' y2='1'><stop offset='0%' stop-color='blue'/><stop offset='100%' stop-color='black'/></linearGradient>`,
-    `<rect width='100%' height='100%' fill='#000'/>`,
-    `<rect width='100%' height='100%' fill='url(#gx)' style='mix-blend-mode:screen'/>`,
-    `<rect width='100%' height='100%' fill='url(#gy)' style='mix-blend-mode:screen'/>`,
-    `<path d='${p}' fill='white' filter='url(#b)' opacity='0.8'/>`,
-    `</svg>`,
-  ].join('')
-  return `data:image/svg+xml,${encodeURIComponent(svg)}`
-})()
-
 // ── Static data (env vars inlined at build time by Next.js) ───────────────────
 
 const BENTO_CARDS: BentoCard[] = [
@@ -258,7 +237,7 @@ function AvatarDropdown({ avatarUrl }: { avatarUrl?: string }) {
           position: 'absolute', top: 48, right: 0, zIndex: 200,
           width: 232,
           background: 'rgba(14, 14, 18, 0.97)',
-          backdropFilter: 'blur(24px)',
+          backdropFilter: 'blur(12px)',
           border: '1px solid rgba(255,255,255,0.1)',
           borderRadius: 16,
           boxShadow: '0 8px 32px rgba(0,0,0,0.8), 0 2px 8px rgba(0,0,0,0.6)',
@@ -532,7 +511,7 @@ export function DashboardClient({
         width: stackWidth, left: containerW - stackWidth, top: 48, bottom: 48, zIndex: 10,
         transform: 'translateX(0) scale(0.92) translateZ(0)', opacity: 1, cursor: 'pointer',
       }),
-      ...(!isNoTransition && !isClone && { transition: 'all 500ms cubic-bezier(0.4, 0, 0.2, 1)' }),
+      ...(!isNoTransition && !isClone && { transition: 'transform 500ms cubic-bezier(0.4, 0, 0.2, 1), opacity 500ms cubic-bezier(0.4, 0, 0.2, 1), width 500ms cubic-bezier(0.4, 0, 0.2, 1), left 500ms cubic-bezier(0.4, 0, 0.2, 1), top 500ms cubic-bezier(0.4, 0, 0.2, 1), bottom 500ms cubic-bezier(0.4, 0, 0.2, 1)' }),
     }
 
     // Use the actual expand duration (dynamic by card distance) so chrome exit/entry
@@ -580,7 +559,7 @@ export function DashboardClient({
         }}>
           <div className="flex flex-col items-center justify-center gap-6 opacity-50 group-hover:opacity-100 transition-all duration-300">
             {profile.avatar
-              ? <img src={profile.avatar} style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)' }} className="grayscale group-hover:grayscale-0 group-hover:scale-110 transition-all duration-300" alt={profile.name} />
+              ? <img src={profile.avatar} style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)' }} className="opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-transform duration-300" alt={profile.name} />
               : profile.icon && <profile.icon size={16} color="white" />
             }
             <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', letterSpacing: '0.3em', fontSize: 11, textTransform: 'uppercase', fontWeight: 600, color: '#d1d5db' }}>
@@ -775,23 +754,12 @@ export function DashboardClient({
                         backfaceVisibility: 'hidden',
                       }}
                     >
-                      {/* ── SVG filter definition (document-global, 0×0, no visual impact) ── */}
-                      <svg style={{ position: 'absolute', width: 0, height: 0, pointerEvents: 'none' }}>
-                        <defs>
-                          <filter id={`lense-bento-${card.id}`} primitiveUnits="objectBoundingBox">
-                            <feImage href={BENTO_GLASS_MAP_SVG} x="0" y="0" width="1" height="1" preserveAspectRatio="none" result="map" />
-                            <feDisplacementMap in="SourceGraphic" scale={0.10} xChannelSelector="R" yChannelSelector="B" />
-                          </filter>
-                        </defs>
-                      </svg>
-
-                      {/* ── Glass: combined blur + displacement in one backdrop-filter pass.
-                           Disabled during expansion — the dark overlay covers the card and
-                           backdrop-filter on a resizing element causes per-frame repaint flicker. ── */}
+                      {/* ── Glass blur — simplified, no SVG displacement map (GPU-expensive).
+                           Disabled during expansion to avoid per-frame repaint flicker. ── */}
                       <div style={{
                         position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none', borderRadius: 'inherit',
-                        backdropFilter: isMounted ? 'none' : `blur(10px) url(#lense-bento-${card.id})`,
-                        WebkitBackdropFilter: isMounted ? 'none' : `blur(10px) url(#lense-bento-${card.id})`,
+                        backdropFilter: isMounted ? 'none' : 'blur(6px)',
+                        WebkitBackdropFilter: isMounted ? 'none' : 'blur(6px)',
                       }} />
 
                       {/* ── Glass edge: gradient border (mask trick) — cheap, always on ── */}
@@ -996,7 +964,7 @@ export function DashboardClient({
     <>
       <style>{`
         @keyframes gradFlow { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
-        .grad-flow { animation: gradFlow 15s ease infinite; }
+        .grad-flow { animation: gradFlow 15s ease infinite; will-change: background-position; }
 
         @keyframes swipeOut {
           0%   { transform: translateX(0) scale(1) translateZ(0); opacity: 1; }

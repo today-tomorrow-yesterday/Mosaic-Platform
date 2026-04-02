@@ -21,8 +21,8 @@ export function ProgressBar({ value, max, color = "zinc" }: ProgressBarProps) {
   return (
     <div className="w-full h-1.5 bg-zinc-100 rounded-full overflow-hidden">
       <div
-        className={`h-full rounded-full transition-all ${isOver ? "bg-red-500" : colorMap[color]}`}
-        style={{ width: `${pct}%` }}
+        className={`h-full w-full rounded-full transition-transform duration-300 ${isOver ? "bg-red-500" : colorMap[color]}`}
+        style={{ transform: `scaleX(${pct / 100})`, transformOrigin: "left" }}
       />
     </div>
   )
