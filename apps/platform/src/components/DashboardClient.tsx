@@ -457,14 +457,14 @@ export function DashboardClient({
     setOrder(prev => [...prev.slice(targetIndex), ...prev.slice(0, targetIndex)])
     setNoTransitionIds(idsToSwipe)
     setTeleportingIds(idsToSwipe)
-    requestAnimationFrame(() => requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
       setNoTransitionIds([])
       setTeleportingIds([])
-    }))
+    })
     setTimeout(() => {
       setSwipingClones([])
       setIsAnimating(false)
-    }, 500 + (clones.length - 1) * 80)
+    }, 400 + (clones.length - 1) * 60)
   }
 
   const handleReset = (e: React.MouseEvent) => {
@@ -504,19 +504,19 @@ export function DashboardClient({
       }),
       ...(!isClone && !isTeleporting && position === 0 && {
         width: activeWidth, left: 0, top: 0, bottom: 0, zIndex: 30,
-        transform: 'translateX(0) scale(1) translateZ(0)', opacity: 1,
+        transform: 'translateX(0) scale(1) rotate(0deg) translateZ(0)', opacity: 1,
         boxShadow: '-20px 0 60px rgba(0,0,0,0.8)',
       }),
       ...(!isClone && !isTeleporting && position === 1 && {
-        width: stackWidth, left: containerW - stackOffset - stackWidth, top: 24, bottom: 24, zIndex: 20,
-        transform: 'translateX(0) scale(0.96) translateZ(0)', opacity: 1,
+        width: stackWidth, left: containerW - stackOffset - stackWidth - 11, top: 24, bottom: 24, zIndex: 20,
+        transform: 'translateX(0) scale(0.96) rotate(2deg) translateZ(0)', opacity: 1,
         boxShadow: '-10px 0 40px rgba(0,0,0,0.6)', cursor: 'pointer',
       }),
       ...(!isClone && !isTeleporting && position === 2 && {
-        width: stackWidth, left: containerW - stackWidth, top: 48, bottom: 48, zIndex: 10,
-        transform: 'translateX(0) scale(0.92) translateZ(0)', opacity: 1, cursor: 'pointer',
+        width: stackWidth, left: containerW - stackWidth - 16, top: 48, bottom: 48, zIndex: 10,
+        transform: 'translateX(0) scale(0.92) rotate(3.5deg) translateZ(0)', opacity: 1, cursor: 'pointer',
       }),
-      ...(!isNoTransition && !isClone && { transition: 'transform 500ms cubic-bezier(0.4, 0, 0.2, 1), opacity 500ms cubic-bezier(0.4, 0, 0.2, 1), width 500ms cubic-bezier(0.4, 0, 0.2, 1), left 500ms cubic-bezier(0.4, 0, 0.2, 1), top 500ms cubic-bezier(0.4, 0, 0.2, 1), bottom 500ms cubic-bezier(0.4, 0, 0.2, 1)' }),
+      ...(!isNoTransition && !isClone && { transition: 'transform 400ms cubic-bezier(0.25, 0.1, 0.25, 1), opacity 400ms cubic-bezier(0.25, 0.1, 0.25, 1), width 400ms cubic-bezier(0.25, 0.1, 0.25, 1), left 400ms cubic-bezier(0.25, 0.1, 0.25, 1), top 400ms cubic-bezier(0.25, 0.1, 0.25, 1), bottom 400ms cubic-bezier(0.25, 0.1, 0.25, 1)' }),
     }
 
     // Use the actual expand duration (dynamic by card distance) so chrome exit/entry
@@ -1085,10 +1085,10 @@ export function DashboardClient({
           0%   { transform: translateX(0) scale(1) translateZ(0); opacity: 1; }
           100% { transform: translateX(-120vw) rotate(-10deg) scale(0.95) translateZ(0); opacity: 0; }
         }
-        .swipe-out-anim { animation: swipeOut 500ms cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+        .swipe-out-anim { animation: swipeOut 400ms cubic-bezier(0.25, 0.1, 0.25, 1) forwards; }
 
         @keyframes fadeOutMidway { 0%{opacity:1} 40%,100%{opacity:0} }
-        .fade-out-midway { animation: fadeOutMidway 500ms cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+        .fade-out-midway { animation: fadeOutMidway 400ms cubic-bezier(0.25, 0.1, 0.25, 1) forwards; }
 
         @keyframes bgFadeIn    { 0%,20%{opacity:0}    100%{opacity:0.98} }
         @keyframes bgFadeOut   { 0%{opacity:0.98}     40%,100%{opacity:0} }
