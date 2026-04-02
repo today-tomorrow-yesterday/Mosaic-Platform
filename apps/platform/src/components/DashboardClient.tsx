@@ -524,8 +524,8 @@ export function DashboardClient({
     const motionDur = expand?.dur ?? EXPAND_DUR
     const chromeSlide = isExpanding ? -80 : isHoveringAnyCard ? -60 : 0
     const chromeOpacity = isExpanding ? 0 : isHoveringAnyCard ? 0.2 : 1
-    const hoverEase = 'cubic-bezier(0.34, 1.56, 0.64, 1)'
-    const hoverDur = '400ms'
+    const hoverEase = 'cubic-bezier(0.25, 0.1, 0.25, 1)'
+    const hoverDur = '300ms'
     const chromeTrans = `transform ${isHoveringAnyCard && !isExpanding ? hoverDur : `${motionDur * 0.6}ms`} ${hoverEase}, opacity ${isHoveringAnyCard && !isExpanding ? hoverDur : `${motionDur * 0.4}ms`} ease`
     const greetingSlide = isExpanding ? -40 : isHoveringAnyCard ? -25 : 0
     const greetingOpacity = isExpanding ? 0 : isHoveringAnyCard ? 0.3 : 1
@@ -768,37 +768,38 @@ export function DashboardClient({
 
                   const isHovered = hoveredCard === card.id && !expand
 
-                  // Proximity-based dimming: calculate how much to dim this card
-                  // based on how close the mouse is to another card
+                  // Proximity-based sibling dimming (spotlight falloff):
+                  // Find which card the mouse is closest to. As the mouse approaches
+                  // that card's edge (within 50px), dim all OTHER cards proportionally.
                   let proximityDim = 0
-                  if (mousePos && !expand && !isHovered) {
-                    const cardEl = cardRefs.current[card.id]
-                    if (cardEl) {
-                      const cx = cardEl.offsetLeft + cardEl.offsetWidth / 2
-                      const cy = cardEl.offsetTop + cardEl.offsetHeight / 2
-                      const dist = Math.sqrt((mousePos.x - cx) ** 2 + (mousePos.y - cy) ** 2)
-                      const cardSize = Math.max(cardEl.offsetWidth, cardEl.offsetHeight)
-                      // Start dimming when mouse is within 2x card size, max dim when directly on another card
-                      const threshold = cardSize * 2
-                      if (hoveredCard) {
-                        // Mouse is on a card — full dim for siblings
-                        proximityDim = 0.35
-                      } else if (dist < threshold) {
-                        // Mouse approaching but not on any card yet — partial dim based on proximity to closest card
-                        // Find distance to the closest OTHER card
-                        let minDistToOther = Infinity
+                  if (mousePos && !expand && isFrontCard) {
+                    // Find distance from mouse to THIS card's edge
+                    const thisEl = cardRefs.current[card.id]
+                    if (thisEl) {
+                      const dx = Math.max(thisEl.offsetLeft - mousePos.x, 0, mousePos.x - (thisEl.offsetLeft + thisEl.offsetWidth))
+                      const dy = Math.max(thisEl.offsetTop - mousePos.y, 0, mousePos.y - (thisEl.offsetTop + thisEl.offsetHeight))
+                      const distToThis = Math.sqrt(dx * dx + dy * dy)
+
+                      if (distToThis === 0) {
+                        // Mouse is INSIDE this card — no dim on self
+                        proximityDim = 0
+                      } else {
+                        // Mouse is outside this card — check if it's close to ANY other card
+                        // If so, dim this one proportionally
+                        let minDistToAny = Infinity
                         for (const other of BENTO_CARDS) {
                           if (other.id === card.id) continue
-                          const otherEl = cardRefs.current[other.id]
-                          if (!otherEl) continue
-                          const ox = otherEl.offsetLeft + otherEl.offsetWidth / 2
-                          const oy = otherEl.offsetTop + otherEl.offsetHeight / 2
-                          const od = Math.sqrt((mousePos.x - ox) ** 2 + (mousePos.y - oy) ** 2)
-                          minDistToOther = Math.min(minDistToOther, od)
+                          const el = cardRefs.current[other.id]
+                          if (!el) continue
+                          const odx = Math.max(el.offsetLeft - mousePos.x, 0, mousePos.x - (el.offsetLeft + el.offsetWidth))
+                          const ody = Math.max(el.offsetTop - mousePos.y, 0, mousePos.y - (el.offsetTop + el.offsetHeight))
+                          minDistToAny = Math.min(minDistToAny, Math.sqrt(odx * odx + ody * ody))
                         }
-                        const otherSize = cardSize * 0.8
-                        if (minDistToOther < otherSize) {
-                          proximityDim = Math.min(0.35, (1 - minDistToOther / otherSize) * 0.35)
+                        // If mouse is inside another card (dist=0), full dim.
+                        // If mouse is within 50px of another card's edge, gradual dim.
+                        const rampPx = 50
+                        if (minDistToAny < rampPx) {
+                          proximityDim = (1 - minDistToAny / rampPx) * 0.35
                         }
                       }
                     }
@@ -808,10 +809,16 @@ export function DashboardClient({
                   return (
                     <div
                       key={card.id}
-                      ref={el => { cardRefs.current[card.id] = el }}
+                      ref={isFrontCard ? (el => { cardRefs.current[card.id] = el }) : undefined}
                       onClick={() => { if (!expand) expandCard(card.id) }}
                       onMouseEnter={() => { if (!expand) setHoveredCard(card.id) }}
                       onMouseLeave={() => setHoveredCard(null)}
+                      onMouseMove={isFrontCard && !expand ? (e) => {
+                        const grid = bentoGridRef.current
+                        if (!grid) return
+                        const rect = grid.getBoundingClientRect()
+                        setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top })
+                      } : undefined}
                       style={{
                         position: 'absolute',
                         ...posStyle,
@@ -823,10 +830,10 @@ export function DashboardClient({
                         boxShadow: '0 20px 60px rgba(0,0,0,0.6), 0 4px 16px rgba(0,0,0,0.35)',
                         zIndex: zIdx,
                         transition: transitionStr !== 'none'
-                          ? `${transitionStr}, transform 400ms cubic-bezier(0.34, 1.56, 0.64, 1)`
-                          : 'transform 400ms cubic-bezier(0.34, 1.56, 0.64, 1)',
+                          ? `${transitionStr}, transform 300ms cubic-bezier(0.25, 0.1, 0.25, 1)`
+                          : 'transform 300ms cubic-bezier(0.25, 0.1, 0.25, 1)',
                         willChange: 'transform',
-                        transform: isHovered ? 'scale(1.02) translateZ(0)' : 'translateZ(0)',
+                        transform: isHovered ? 'scale(1.02) translateZ(0)' : isOtherHovered ? 'scale(0.98) translateZ(0)' : 'translateZ(0)',
                         backfaceVisibility: 'hidden',
                       }}
                     >
@@ -928,7 +935,7 @@ export function DashboardClient({
                         <div style={{
                           position: 'absolute', inset: 0, zIndex: 6,
                           transform: isHovered ? 'scale(1.1) translate(-3px, -3px)' : 'scale(1) translate(0, 0)',
-                          transition: 'transform 500ms cubic-bezier(0.34, 1.56, 0.64, 1)',
+                          transition: 'transform 300ms cubic-bezier(0.25, 0.1, 0.25, 1)',
                         }}>{card.illus()}</div>
                         <div style={{
                           position: 'absolute', inset: 0, zIndex: 10,
@@ -942,7 +949,7 @@ export function DashboardClient({
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             marginBottom: 'auto',
                             transform: isHovered ? 'scale(1.08)' : 'scale(1)',
-                            transition: 'transform 400ms cubic-bezier(0.34, 1.56, 0.64, 1)',
+                            transition: 'transform 300ms cubic-bezier(0.25, 0.1, 0.25, 1)',
                           }}>
                             <IconComp size={17} color={card.iconColor} />
                           </div>
