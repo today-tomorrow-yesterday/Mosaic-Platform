@@ -808,7 +808,12 @@ export function DashboardClient({
                         }
                       }}
                       className="bento-prox-container"
-                      style={{ position: 'absolute', ...posStyle, zIndex: zIdx }}
+                      style={{
+                        position: 'absolute',
+                        ...posStyle,
+                        zIndex: zIdx,
+                        transition: transitionStr,
+                      }}
                     >
                     <div
                       ref={isFrontCard ? (el => { cardRefs.current[card.id] = el }) : undefined}
@@ -824,7 +829,7 @@ export function DashboardClient({
                         cursor: isThis ? 'default' : 'pointer',
                         background: `linear-gradient(145deg, ${card.glassTint} 0%, rgba(8,6,20,0.18) 100%)`,
                         boxShadow: '0 20px 60px rgba(0,0,0,0.6), 0 4px 16px rgba(0,0,0,0.35)',
-                        transition: transitionStr,
+                        transition: `border-radius ${expand?.dur ?? 300}ms cubic-bezier(0.4,0,0.2,1)`,
                         backfaceVisibility: 'hidden',
                       }}
                     >
