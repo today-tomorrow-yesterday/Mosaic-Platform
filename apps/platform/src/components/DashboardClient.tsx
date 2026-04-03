@@ -11,40 +11,55 @@ import type { GlassParams } from './GlassLab'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
+// ╔══════════════════════════════════════════════════════════════════════════════╗
+// ║  ⚠️  LOCKED VALUES — DO NOT MODIFY WITHOUT EXPLICIT REQUEST                ║
+// ║  These constants control hand-tuned transitions and positioning.            ║
+// ║  Changing any value will break the timing, feel, or alignment of the UI.    ║
+// ║  Each value was iteratively tested and approved.                            ║
+// ╚══════════════════════════════════════════════════════════════════════════════╝
+
 /** Chrome panel fill color — deep indigo matching the page gradient's darkest corner
- *  so the chrome cutout SVGs blend seamlessly into the background. */
+ *  so the chrome cutout SVGs blend seamlessly into the background.
+ *  ⚠️ LOCKED — must match the radial-gradient top-corner in the render section. */
 const CHROME_BG = '#0c0b18'
 
-/** Stack swipe animation: base duration (ms) + distance-scaled bonus for natural pacing. */
+/** Stack swipe animation: base duration (ms) + distance-scaled bonus for natural pacing.
+ *  ⚠️ LOCKED — controls the feel of profile card swipe-out. Tuned to 300+350ms. */
 const SWIPE_BASE_DURATION_MS = 300
 const SWIPE_MAX_EXTRA_MS = 350
 
-/** Bento card expand/collapse: fallback duration when no expand state is active. */
+/** Bento card expand/collapse: fallback duration when no expand state is active.
+ *  ⚠️ LOCKED — 500ms balances speed and readability during card morph. */
 const CARD_EXPAND_FALLBACK_MS = 500
 
 /** Profile stack: rotation angles for the "scattered paper" effect on stacked cards.
  *  Position 0 (front) = 0°, position 1 = slight tilt, position 2 = more tilt.
- *  Creates organic depth — cards un-rotate as they transition to front. */
+ *  Creates organic depth — cards un-rotate as they transition to front.
+ *  ⚠️ LOCKED — these angles were visually tuned. Changing them misaligns the swipe arc. */
 const STACK_ROTATION_DEG = { front: 0, middle: 2, back: 3.5 }
 
-/** Profile stack: left offset (px) to pull stacked cards inward, preventing edge overflow. */
+/** Profile stack: left offset (px) to pull stacked cards inward, preventing edge overflow.
+ *  ⚠️ LOCKED — pixel-tuned to keep the bottom stack on-screen at all viewport widths. */
 const STACK_INSET_PX = { middle: 11, back: 16 }
 
 /** Proximity Hover Engine: edge-distance detection radius (px) and max scale/lift values.
- *  Uses power-1.5 easing curve for organic ramp-up (see specimen diagnostics pattern). */
+ *  Uses power-1.5 easing curve for organic ramp-up (see specimen diagnostics pattern).
+ *  ⚠️ LOCKED — maxScaleIncrease=0.02 is the agreed maximum. Do not exceed. */
 const PROXIMITY_CONFIG = {
   triggerDistancePx: 150,    // how far from a card's bounding box the effect begins
-  maxScaleIncrease: 0.02,    // 1.02 at closest approach
+  maxScaleIncrease: 0.02,    // 1.02 at closest approach — DO NOT EXCEED
   maxLiftPx: -4,             // 4px upward lift at closest approach
   easingPower: 1.5,          // power curve for smooth organic ramp
 }
 
-/** Shared easing curve — smooth ease-out with no spring/overshoot. */
+/** Shared easing curve — smooth ease-out with no spring/overshoot.
+ *  ⚠️ LOCKED — replaces the old springy cubic-bezier(0.34, 1.56, 0.64, 1). No bounce. */
 const EASE_SMOOTH = 'cubic-bezier(0.25, 0.1, 0.25, 1)'
 
-/** Transition durations for interactive states. */
+/** Transition durations for interactive states.
+ *  ⚠️ LOCKED — 300ms hover / 480ms stack were tested at multiple speeds and approved. */
 const HOVER_TRANSITION_MS = 300
-const STACK_TRANSITION_MS = 400
+const STACK_TRANSITION_MS = 480
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -431,23 +446,45 @@ export function DashboardClient({
     if (expand) return
     const { triggerDistancePx, maxScaleIncrease, maxLiftPx, easingPower } = PROXIMITY_CONFIG
 
-    bentoCardRefs.current.forEach((node) => {
+    // Pass 1: calculate each card's intensity, find the focused card
+    let focusedId: string | null = null
+    let focusedIntensity = 0
+    const intensities = new Map<string, number>()
+
+    bentoCardRefs.current.forEach((node, id) => {
       if (!node) return
       const rect = node.getBoundingClientRect()
-      // Distance to bounding box EDGE (0 when cursor is inside the card)
       const dx = Math.max(rect.left - e.clientX, 0, e.clientX - rect.right)
       const dy = Math.max(rect.top - e.clientY, 0, e.clientY - rect.bottom)
       const edgeDist = Math.hypot(dx, dy)
 
+      let intensity = 0
       if (edgeDist < triggerDistancePx) {
-        // Normalize 0→1 (1 = touching/inside, 0 = at trigger boundary)
-        // Power curve creates organic, non-linear ramp — the "secret sauce" for premium feel
-        const intensity = Math.pow(1 - edgeDist / triggerDistancePx, easingPower)
+        intensity = Math.pow(1 - edgeDist / triggerDistancePx, easingPower)
+      }
+      intensities.set(id, intensity)
+      if (intensity > focusedIntensity) {
+        focusedIntensity = intensity
+        focusedId = id
+      }
+    })
+
+    // Pass 2: focused card scales up (no dim), siblings dim proportionally
+    bentoCardRefs.current.forEach((node, id) => {
+      if (!node) return
+      const intensity = intensities.get(id) ?? 0
+
+      if (id === focusedId && intensity > 0) {
+        // Focused card: scale + lift, always fully bright
         node.style.setProperty('--prox-scale', String(1 + maxScaleIncrease * intensity))
         node.style.setProperty('--prox-y', `${maxLiftPx * intensity}px`)
+        node.style.setProperty('--prox-dim', '0')
       } else {
+        // Sibling: reset scale, dim based on how close the mouse is to the focused card
+        // focusedIntensity * 0.35 = max 35% dark overlay when mouse is directly on the focused card
         node.style.setProperty('--prox-scale', '1')
         node.style.setProperty('--prox-y', '0px')
+        node.style.setProperty('--prox-dim', String(focusedIntensity * 0.35))
       }
     })
   }, [expand])
@@ -458,6 +495,7 @@ export function DashboardClient({
       if (!node) return
       node.style.setProperty('--prox-scale', '1')
       node.style.setProperty('--prox-y', '0px')
+      node.style.setProperty('--prox-dim', '0')
     })
     setHoveredCard(null)
   }, [])
@@ -465,8 +503,8 @@ export function DashboardClient({
   const expandCard = useCallback((id: string) => {
     if (expand) return
     const bentoEl = bentoGridRef.current
-    // Use the outer proximity wrapper (bentoCardRefs) for position — it owns the
-    // absolute grid placement. The inner cardRefs div has inset:0 so offset would be 0.
+    // ⚠️ LOCKED — Must use bentoCardRefs (outer wrapper) for position, NOT cardRefs (inner div).
+    // The inner div has inset:0 so offsetTop/offsetLeft are always 0. Using it breaks expand origin.
     const wrapperEl = bentoCardRefs.current.get(id)
     const activeEl = activeViewRef.current
     if (!bentoEl || !wrapperEl || !activeEl) return
@@ -548,14 +586,16 @@ export function DashboardClient({
     setSwipingClones(swipeClones)
     // Reorder: target profile moves to front, swiped profiles go to back
     setOrder(prev => [...prev.slice(targetIndex), ...prev.slice(0, targetIndex)])
-    // Disable transitions on swiped cards so they teleport to back position instantly
+    // ⚠️ LOCKED — Double requestAnimationFrame is REQUIRED here. Do not simplify to single rAF.
+    // The browser needs a full paint cycle to render the teleported cards at their back
+    // position before transitions are re-enabled. Single rAF causes a visible flash/flicker
+    // where cards animate from their old position instead of snapping to the back first.
     setNoTransitionIds(idsToSwipe)
     setTeleportingIds(idsToSwipe)
-    // Re-enable transitions on the next frame so the new front card animates in
-    requestAnimationFrame(() => {
+    requestAnimationFrame(() => requestAnimationFrame(() => {
       setNoTransitionIds([])
       setTeleportingIds([])
-    })
+    }))
     // Clean up clones after the swipe animation completes
     setTimeout(() => {
       setSwipingClones([])
@@ -636,12 +676,14 @@ export function DashboardClient({
     // Chrome panel slide — hides header/greeting when a bento card is expanding to full-screen.
     // Duration is synced to the expand animation for coordinated motion.
     const expandDur = expand?.dur ?? CARD_EXPAND_FALLBACK_MS
-    const chromeSlideY = isExpanding ? -80 : 0
-    const chromeOpacity = isExpanding ? 0 : 1
-    const chromeTransition = `transform ${expandDur * 0.6}ms ${EASE_SMOOTH}, opacity ${expandDur * 0.4}ms ease`
-    const greetingSlideY = isExpanding ? -40 : 0
-    const greetingOpacity = isExpanding ? 0 : 1
-    const greetingTransition = `transform ${expandDur * 0.5}ms ${EASE_SMOOTH}, opacity ${expandDur * 0.3}ms ease`
+    const chromeSlideY = isExpanding ? -80 : isHoveringAnyCard ? -60 : 0
+    const chromeOpacity = isExpanding ? 0 : isHoveringAnyCard ? 0.2 : 1
+    const chromeDur = isHoveringAnyCard && !isExpanding ? STACK_TRANSITION_MS : expandDur * 0.6
+    const chromeTransition = `transform ${chromeDur}ms ${EASE_SMOOTH}, opacity ${chromeDur}ms ease`
+    const greetingSlideY = isExpanding ? -40 : isHoveringAnyCard ? -25 : 0
+    const greetingOpacity = isExpanding ? 0 : isHoveringAnyCard ? 0.3 : 1
+    const greetingDur = isHoveringAnyCard && !isExpanding ? STACK_TRANSITION_MS : expandDur * 0.5
+    const greetingTransition = `transform ${greetingDur}ms ${EASE_SMOOTH}, opacity ${greetingDur}ms ease`
 
     // Clone swipe animation — visual copy of the outgoing profile card
     const swipeOutFadeClass = isClone ? 'fade-out-midway' : ''
@@ -717,7 +759,7 @@ export function DashboardClient({
             transition: 'opacity 300ms',
           }}
         >
-          {/* Top-left chrome */}
+          {/* Top-left chrome — ⚠️ LOCKED: top:-1/left:-1 fixes anti-aliasing seam at card border-radius */}
           <div
             className={swipeOutFadeClass}
             style={{
@@ -749,9 +791,9 @@ export function DashboardClient({
                     onClick={(e) => { e.stopPropagation(); setLabOpen(o => !o) }}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 9999,
-                      backgroundColor: labOpen ? 'rgba(167,139,250,0.15)' : 'rgba(255,255,255,0.05)',
-                      border: `1px solid ${labOpen ? 'rgba(167,139,250,0.3)' : 'rgba(255,255,255,0.05)'}`,
-                      color: labOpen ? '#c4b5fd' : '#d1d5db',
+                      backgroundColor: labOpen ? 'rgba(96,165,250,0.15)' : 'rgba(255,255,255,0.05)',
+                      border: `1px solid ${labOpen ? 'rgba(96,165,250,0.3)' : 'rgba(255,255,255,0.05)'}`,
+                      color: labOpen ? '#93c5fd' : '#d1d5db',
                       fontSize: 13, fontWeight: 500, cursor: 'pointer',
                     }}
                     className="hover:bg-white/10 transition-colors duration-200"
@@ -763,7 +805,7 @@ export function DashboardClient({
             </div>
           </div>
 
-          {/* Top-right chrome */}
+          {/* Top-right chrome — ⚠️ LOCKED: top:-1/right:-1 fixes anti-aliasing seam at card border-radius */}
           <div
             className={swipeOutFadeClass}
             style={{
@@ -977,12 +1019,9 @@ export function DashboardClient({
                         animationPlayState: isMounted ? 'paused' : 'running',
                       }} />
 
-                      {/* Sibling dim overlay on hover */}
-                      <div style={{
-                        position: 'absolute', inset: 0, zIndex: 7, backgroundColor: 'black',
-                        opacity: (hoveredCard && hoveredCard !== card.id && !expand) ? 0.35 : 0,
-                        transition: 'opacity 300ms ease', pointerEvents: 'none',
-                      }} />
+                      {/* Sibling dim overlay — driven by proximity engine's --prox-dim variable.
+                         Dims gradually as the mouse approaches a neighbor card, not on hover enter. */}
+                      <div className="bento-prox-dim" />
 
                       {/* Dark overlay when expanding */}
                       {isMounted && expand && (
@@ -1014,7 +1053,7 @@ export function DashboardClient({
                         <div style={{
                           position: 'absolute', inset: 0, zIndex: 6,
                           transform: isHovered ? 'scale(1.1) translate(-3px, -3px)' : 'scale(1) translate(0, 0)',
-                          transition: 'transform 300ms cubic-bezier(0.25, 0.1, 0.25, 1)',
+                          transition: `transform ${STACK_TRANSITION_MS}ms ${EASE_SMOOTH}`,
                         }}>{card.illus()}</div>
                         <div style={{
                           position: 'absolute', inset: 0, zIndex: 10,
@@ -1028,7 +1067,7 @@ export function DashboardClient({
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             marginBottom: 'auto',
                             transform: isHovered ? 'scale(1.08)' : 'scale(1)',
-                            transition: 'transform 300ms cubic-bezier(0.25, 0.1, 0.25, 1)',
+                            transition: `transform ${STACK_TRANSITION_MS}ms ${EASE_SMOOTH}`,
                           }}>
                             <IconComp size={17} color={card.iconColor} />
                           </div>
@@ -1045,7 +1084,7 @@ export function DashboardClient({
                               backgroundColor: 'rgba(255,255,255,0.05)',
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
                               transform: isHovered ? 'translate(3px, -3px)' : 'translate(0px, 0px)',
-                              transition: 'transform 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+                              transition: `transform ${STACK_TRANSITION_MS}ms ${EASE_SMOOTH}`,
                             }}>
                               <ArrowUpRight size={13} color="white" />
                             </div>
@@ -1161,14 +1200,17 @@ export function DashboardClient({
         @keyframes gradFlow { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
         .grad-flow { animation: gradFlow 15s ease infinite; will-change: background-position; }
 
+        /* ⚠️ LOCKED — swipe-out animation: duration, rotation, and easing are hand-tuned.
+           The -10deg rotation mirrors the scattered paper stack angles. */
         @keyframes swipeOut {
           0%   { transform: translateX(0) scale(1) translateZ(0); opacity: 1; }
           100% { transform: translateX(-120vw) rotate(-10deg) scale(0.95) translateZ(0); opacity: 0; }
         }
-        .swipe-out-anim { animation: swipeOut 400ms cubic-bezier(0.25, 0.1, 0.25, 1) forwards; }
+        .swipe-out-anim { animation: swipeOut 480ms cubic-bezier(0.25, 0.1, 0.25, 1) forwards; }
 
+        /* ⚠️ LOCKED — fade-out timing synced to swipe-out duration. */
         @keyframes fadeOutMidway { 0%{opacity:1} 40%,100%{opacity:0} }
-        .fade-out-midway { animation: fadeOutMidway 400ms cubic-bezier(0.25, 0.1, 0.25, 1) forwards; }
+        .fade-out-midway { animation: fadeOutMidway 480ms cubic-bezier(0.25, 0.1, 0.25, 1) forwards; }
 
         @keyframes bgFadeIn    { 0%,20%{opacity:0}    100%{opacity:0.98} }
         @keyframes bgFadeOut   { 0%{opacity:0.98}     40%,100%{opacity:0} }
@@ -1204,10 +1246,24 @@ export function DashboardClient({
           85%      { opacity: 0; }
         }
 
+        /* ⚠️ LOCKED — Proximity Hover Engine CSS binding.
+           0.1s linear smooths continuous JS mousemove updates.
+           CSS variables are set by calculateProximityHoverEffects() via style.setProperty().
+           Do not move transform to inline styles — React re-renders will wipe the variables. */
         .bento-prox-container {
-          transition: transform 0.1s linear;
+          transition: transform 0.15s ease-out;
           will-change: transform;
           transform: scale(var(--prox-scale, 1)) translateY(var(--prox-y, 0px));
+        }
+        .bento-prox-dim {
+          position: absolute;
+          inset: 0;
+          z-index: 7;
+          background-color: black;
+          pointer-events: none;
+          border-radius: inherit;
+          opacity: var(--prox-dim, 0);
+          transition: opacity 0.2s ease-out;
         }
 
         .no-underline { text-decoration: none; }

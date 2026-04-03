@@ -85,7 +85,7 @@
     conic-gradient(
       from var(--build-angle),
       var(--s-accent),
-      #a78bfa,
+      #60a5fa,
       #60a5fa,
       var(--s-accent)
     ) border-box;
@@ -300,6 +300,71 @@
   animation: glass-lab-drift 12s ease-in-out infinite;
   will-change: transform;
 }
+
+/* ── Glass Lab: panel enter/exit animations ──────────────────── */
+@keyframes glass-lab-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+@keyframes glass-lab-out {
+  from { opacity: 1; transform: translateY(0)    scale(1);    }
+  to   { opacity: 0; transform: translateY(10px) scale(0.98); }
+}
+@keyframes glass-slide-in-x {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0);    }
+}
+@keyframes glass-value-pulse {
+  0%   { color: #bfdbfe; }
+  100% { color: #93c5fd; }
+}
+
+/* ── Glass Lab: custom range slider ──────────────────────────── */
+.glass-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.08);
+  outline: none;
+  cursor: pointer;
+}
+.glass-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(96,165,250,0.22);
+  cursor: grab;
+  transition: transform 100ms ease-out, box-shadow 100ms ease-out;
+}
+.glass-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.22);
+  box-shadow: 0 0 0 4px rgba(96,165,250,0.3);
+}
+.glass-slider::-webkit-slider-thumb:active {
+  transform: scale(0.95);
+  box-shadow: 0 0 0 6px rgba(96,165,250,0.35);
+  cursor: grabbing;
+}
+.glass-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: none;
+  background: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(96,165,250,0.22);
+  cursor: grab;
+}
+.glass-value-display {
+  animation: glass-value-pulse 350ms ease-out both;
+}
+
+/* Hide scrollbar on preset rail */
+.glass-preset-rail::-webkit-scrollbar { display: none; }
+.glass-preset-rail { -ms-overflow-style: none; scrollbar-width: none; }
 
 /* ── Accessibility: respect reduced-motion preference ──────────── */
 @media (prefers-reduced-motion: reduce) {

@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useMemo } from "react"
+import React, { useMemo, useState, useRef, useEffect, useCallback } from "react"
 import { X, FlaskConical, ImageIcon, Play, Pause } from "lucide-react"
 
 // ── Engine types ─────────────────────────────────────────────────────────────
@@ -178,30 +178,53 @@ interface GlassLabPanelProps {
   profiles: StackProfile[]    // profile list for per-stack background pickers
 }
 
+// ── Slider sub-component ─────────────────────────────────────────────────────
+
 function Slider({
   label, value, display, min, max, step, onChange,
 }: {
   label: string; value: number; display: string; min: number; max: number; step: number; onChange: (v: number) => void
 }): React.ReactElement {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 2px" }}>
-        <span style={{ fontSize: 8, textTransform: "uppercase", letterSpacing: "0.15em", fontWeight: 800, opacity: 0.4, color: "white" }}>{label}</span>
-        <span style={{ fontSize: 10, fontFamily: "monospace", color: "#60a5fa", fontWeight: 700 }}>{display}</span>
+    <div style={{ display: "flex", flexDirection: "column", gap: 7, minWidth: 0 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 1px" }}>
+        <span style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.14em", fontWeight: 700, color: "rgba(255,255,255,0.32)" }}>{label}</span>
+        <span
+          key={String(Math.round(value * 100))}
+          className="glass-value-display"
+          style={{ fontSize: 11, fontWeight: 500, color: "#93c5fd", fontVariantNumeric: "tabular-nums" }}
+        >{display}</span>
       </div>
       <input
         type="range" min={min} max={max} step={step} value={value}
         onChange={(e) => onChange(parseFloat(e.target.value))}
-        style={{ width: "100%", height: 4, borderRadius: 10, outline: "none", WebkitAppearance: "none", background: "rgba(255,255,255,0.1)" }}
+        className="glass-slider"
       />
     </div>
   )
 }
 
+// ── Panel component ──────────────────────────────────────────────────────────
+
 export function GlassLabPanel({ params, onChange, onClose, profiles }: GlassLabPanelProps): React.ReactElement {
+  const [closing, setClosing] = useState(false)
+  const [lastPreset, setLastPreset] = useState("Linear")
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current)
+  }, [])
+
+  const handleClose = useCallback(() => {
+    setClosing(true)
+    closeTimer.current = setTimeout(onClose, 200)
+  }, [onClose])
+
   const update = <K extends keyof GlassParams>(key: K, value: GlassParams[K]): void => {
     onChange({ ...params, [key]: value })
   }
+
+  const activePresetLabel = lastPreset
 
   const renderImagePicker = (
     field: string,
@@ -209,16 +232,18 @@ export function GlassLabPanel({ params, onChange, onClose, profiles }: GlassLabP
     onSelect: (v: BgSelection) => void,
     noneLabel = "None",
   ): React.ReactElement => (
-    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+    <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
       <button
         onClick={() => onSelect(null)}
+        className="transition-all duration-150 hover:scale-105 active:scale-95"
         style={{
-          width: 56, height: 40, borderRadius: 10, border: "2px solid",
-          borderColor: current === null ? "#a78bfa" : "rgba(255,255,255,0.1)",
-          background: field === "stackBgImage" ? "linear-gradient(135deg, #0d1f15, #1b422a, #070d09)" : "rgba(255,255,255,0.05)",
+          width: 60, height: 42, borderRadius: 10, border: "2px solid",
+          borderColor: current === null ? "#60a5fa" : "rgba(255,255,255,0.1)",
+          background: field === "stackBgImages" ? "linear-gradient(135deg, #0d1f15, #1b422a, #070d09)" : "rgba(255,255,255,0.05)",
+          boxShadow: current === null ? "inset 0 0 0 2px #60a5fa, 0 0 0 3px rgba(96,165,250,0.2)" : "none",
           cursor: "pointer",
           display: "flex", alignItems: "center", justifyContent: "center",
-          color: "rgba(255,255,255,0.4)", fontSize: 9, fontWeight: 700,
+          color: current === null ? "#93c5fd" : "rgba(255,255,255,0.35)", fontSize: 9, fontWeight: 600,
         }}
       >
         {noneLabel}
@@ -230,13 +255,16 @@ export function GlassLabPanel({ params, onChange, onClose, profiles }: GlassLabP
           <button
             key={`${bg.label}-${pos}`}
             onClick={() => onSelect({ url: bg.url, position: pos })}
+            className="transition-all duration-150 hover:scale-105 active:scale-95"
             style={{
-              width: 56, height: 40, borderRadius: 10, border: "2px solid",
-              borderColor: isActive ? "#a78bfa" : "rgba(255,255,255,0.1)",
+              width: 60, height: 42, borderRadius: 10, border: "2px solid",
+              borderColor: isActive ? "#60a5fa" : "rgba(255,255,255,0.1)",
+              boxShadow: isActive ? "inset 0 0 0 2px #60a5fa, 0 0 0 3px rgba(96,165,250,0.2)" : "none",
               backgroundImage: `url(${bg.url})`,
               backgroundSize: "cover",
               backgroundPosition: pos,
               cursor: "pointer", overflow: "hidden", padding: 0,
+              transition: "border-color 160ms ease-out, box-shadow 160ms ease-out, transform 150ms ease-out",
             }}
             title={bg.label}
           />
@@ -247,54 +275,70 @@ export function GlassLabPanel({ params, onChange, onClose, profiles }: GlassLabP
 
   return (
     <div style={{
-      position: "fixed", bottom: 32, left: "50%", transform: "translateX(-50%)",
-      zIndex: 200, width: "100%", maxWidth: 920, padding: "0 16px",
+      position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)",
+      zIndex: 200, width: "100%", maxWidth: 880,
     }}>
       <div style={{
-        background: "rgba(0,0,0,0.85)", backdropFilter: "blur(24px)",
-        border: "1px solid rgba(255,255,255,0.15)", borderRadius: 40,
-        padding: 24, boxShadow: "0 20px 60px rgba(0,0,0,0.8)",
-        animation: "dropdown-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both",
+        background: "rgba(10, 9, 20, 0.92)",
+        backdropFilter: "blur(24px)",
+        border: "1px solid rgba(255,255,255,0.09)",
+        borderRadius: 20,
+        padding: "18px 20px",
+        boxShadow: "0 32px 80px rgba(0,0,0,0.75), 0 0 0 0.5px rgba(255,255,255,0.06) inset",
+        animation: closing
+          ? "glass-lab-out 200ms cubic-bezier(0.4, 0, 1, 1) both"
+          : "glass-lab-in 240ms cubic-bezier(0.22, 1, 0.36, 1) both",
       }}>
+        {/* Drag handle */}
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
+          <div style={{ width: 28, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.15)" }} />
+        </div>
+
         {/* Header */}
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",
-          borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: 16, marginBottom: 20,
+          borderBottom: "1px solid rgba(255,255,255,0.06)", paddingBottom: 14, marginBottom: 14,
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <FlaskConical size={14} color="#a78bfa" />
-            <span style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.25em", fontWeight: 800, color: "rgba(255,255,255,0.35)" }}>Glass Laboratory</span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: "white" }}>
-              {PRESETS.find(p => p.engine === params.engine)?.label ?? "Custom"}
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <FlaskConical size={13} color="#60a5fa" />
+            <span style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.18em", fontWeight: 700, color: "rgba(255,255,255,0.32)" }}>Glass Lab</span>
+            <span style={{
+              fontSize: 11, fontWeight: 600, padding: "2px 10px", borderRadius: 9999,
+              background: "rgba(96,165,250,0.12)", color: "#93c5fd",
+            }}>
+              {activePresetLabel}
             </span>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
+            className="transition-all duration-120 hover:bg-white/[0.12] active:scale-92"
             style={{
-              width: 32, height: 32, borderRadius: "50%", border: "none",
-              background: "rgba(255,255,255,0.05)", color: "white", cursor: "pointer",
+              width: 28, height: 28, borderRadius: 10, border: "1px solid rgba(255,255,255,0.08)",
+              background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)", cursor: "pointer",
               display: "flex", alignItems: "center", justifyContent: "center",
             }}
           >
-            <X size={14} />
+            <X size={12} />
           </button>
         </div>
 
         {/* Engine presets */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
+        <div className="glass-preset-rail" style={{ display: "flex", gap: 6, marginBottom: 14, overflowX: "auto", whiteSpace: "nowrap" }}>
           {PRESETS.map((preset) => {
-            const isActive = params.engine === preset.engine &&
-              (preset.engine === ENGINE.OFF || Math.abs(params.blur - (preset.params.blur ?? 0)) < 2)
+            const isActive = preset.engine === params.engine
+              && preset.params.blur === params.blur
+              && preset.params.refraction === params.refraction
             return (
               <button
                 key={preset.label}
-                onClick={() => onChange({ ...params, engine: preset.engine, ...preset.params })}
+                onClick={() => { setLastPreset(preset.label); onChange({ ...params, engine: preset.engine, ...preset.params }) }}
+                className="transition-all duration-120 hover:border-blue-400/30 hover:text-white/70 active:scale-[0.97]"
                 style={{
-                  padding: "6px 14px", borderRadius: 9999, border: "1px solid",
-                  borderColor: isActive ? "rgba(167,139,250,0.5)" : "rgba(255,255,255,0.08)",
-                  background: isActive ? "rgba(167,139,250,0.15)" : "rgba(255,255,255,0.03)",
-                  color: isActive ? "#c4b5fd" : "rgba(255,255,255,0.5)",
-                  fontSize: 11, fontWeight: 600, cursor: "pointer",
+                  padding: "5px 13px", borderRadius: 9999, border: "1px solid", flexShrink: 0,
+                  borderColor: isActive ? "rgba(96,165,250,0.4)" : "rgba(255,255,255,0.09)",
+                  background: isActive ? "rgba(96,165,250,0.13)" : "rgba(255,255,255,0.04)",
+                  color: isActive ? "#93c5fd" : "rgba(255,255,255,0.42)",
+                  fontSize: 12, fontWeight: 500, cursor: "pointer",
                 }}
               >
                 {preset.label}
@@ -303,8 +347,11 @@ export function GlassLabPanel({ params, onChange, onClose, profiles }: GlassLabP
           })}
         </div>
 
-        {/* Sliders */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 20, marginBottom: 20 }}>
+        {/* Separator */}
+        <div style={{ height: 1, background: "rgba(255,255,255,0.07)", margin: "0 0 14px" }} />
+
+        {/* Parameter sliders */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 18, marginBottom: 14 }}>
           <Slider label="Blur" value={params.blur} display={`${params.blur}px`} min={0} max={40} step={1} onChange={(v) => update("blur", v)} />
           <Slider
             label="Refraction" value={params.refraction} display={params.refraction.toFixed(2)}
@@ -314,69 +361,82 @@ export function GlassLabPanel({ params, onChange, onClose, profiles }: GlassLabP
           <Slider label="Tint" value={params.opacity} display={`${Math.round(params.opacity * 100)}%`} min={0} max={0.4} step={0.01} onChange={(v) => update("opacity", v)} />
         </div>
 
-        {/* Card background picker */}
-        <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 16 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-            <ImageIcon size={12} color="rgba(255,255,255,0.4)" />
-            <span style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.2em", fontWeight: 800, color: "rgba(255,255,255,0.35)" }}>
-              Card Background
-            </span>
-          </div>
-          {renderImagePicker("bgImage", params.bgImage, (v) => update("bgImage", v))}
-        </div>
+        {/* Separator */}
+        <div style={{ height: 1, background: "rgba(255,255,255,0.07)", margin: "0 0 14px" }} />
 
-        {/* Per-profile stack background pickers */}
-        <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 16, marginTop: 16 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <ImageIcon size={12} color="rgba(255,255,255,0.4)" />
-              <span style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.2em", fontWeight: 800, color: "rgba(255,255,255,0.35)" }}>
-                Stack Backgrounds
+        {/* Two-column background section */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1px 1fr", gap: 18 }}>
+
+          {/* Left: Card background */}
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 10 }}>
+              <ImageIcon size={11} color="#60a5fa" />
+              <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.12em", fontWeight: 600, color: "rgba(255,255,255,0.38)" }}>
+                Card Background
               </span>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <button
-                onClick={() => update("bgMotion", !params.bgMotion)}
-                style={{
-                  display: "flex", alignItems: "center", gap: 6, padding: "4px 12px", borderRadius: 9999,
-                  border: "1px solid",
-                  borderColor: params.bgMotion ? "rgba(52,211,153,0.4)" : "rgba(255,255,255,0.08)",
-                  background: params.bgMotion ? "rgba(52,211,153,0.12)" : "rgba(255,255,255,0.03)",
-                  color: params.bgMotion ? "#34d399" : "rgba(255,255,255,0.4)",
-                  fontSize: 10, fontWeight: 700, cursor: "pointer", flexShrink: 0,
-                }}
-              >
-                {params.bgMotion ? <Pause size={10} /> : <Play size={10} />}
-                Motion
-              </button>
-              {params.bgMotion && (
-                <div style={{ width: 100 }}>
-                  <Slider
-                    label="Speed"
-                    value={params.bgMotionSpeed}
-                    display={`${params.bgMotionSpeed}s`}
-                    min={3}
-                    max={30}
-                    step={1}
-                    onChange={(v) => update("bgMotionSpeed", v)}
-                  />
-                </div>
-              )}
-            </div>
+            {renderImagePicker("bgImage", params.bgImage, (v) => update("bgImage", v))}
           </div>
-          {profiles.map((p) => (
-            <div key={p.id} style={{ marginBottom: 10 }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: 6, display: "block" }}>
-                {p.name}
-              </span>
-              {renderImagePicker(
-                "stackBgImages",
-                params.stackBgImages[p.id] ?? null,
-                (v) => onChange({ ...params, stackBgImages: { ...params.stackBgImages, [p.id]: v } }),
-                "Grad",
-              )}
+
+          {/* Vertical divider */}
+          <div style={{ background: "rgba(255,255,255,0.07)", alignSelf: "stretch" }} />
+
+          {/* Right: Stack backgrounds */}
+          <div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                <ImageIcon size={11} color="#60a5fa" />
+                <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.12em", fontWeight: 600, color: "rgba(255,255,255,0.38)" }}>
+                  Stacks
+                </span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <button
+                  onClick={() => update("bgMotion", !params.bgMotion)}
+                  className="transition-all duration-150 hover:brightness-125"
+                  style={{
+                    display: "flex", alignItems: "center", gap: 5, padding: "3px 9px", borderRadius: 9999,
+                    border: "1px solid",
+                    borderColor: params.bgMotion ? "rgba(52,211,153,0.35)" : "rgba(255,255,255,0.08)",
+                    background: params.bgMotion ? "rgba(52,211,153,0.10)" : "rgba(255,255,255,0.04)",
+                    color: params.bgMotion ? "#6ee7b7" : "rgba(255,255,255,0.4)",
+                    fontSize: 10, fontWeight: 600, cursor: "pointer", flexShrink: 0,
+                  }}
+                >
+                  {params.bgMotion ? <Pause size={9} /> : <Play size={9} />}
+                  Motion
+                </button>
+                <div style={{
+                  width: params.bgMotion ? 100 : 0,
+                  opacity: params.bgMotion ? 1 : 0,
+                  overflow: "hidden",
+                  transition: "width 0.2s ease, opacity 0.15s ease",
+                  minHeight: 32,
+                  display: "flex", alignItems: "center",
+                }}>
+                  <div style={{ width: 100, padding: "4px 0" }}>
+                    <Slider label="Speed" value={params.bgMotionSpeed} display={`${params.bgMotionSpeed}s`} min={3} max={30} step={1} onChange={(v) => update("bgMotionSpeed", v)} />
+                  </div>
+                </div>
+              </div>
             </div>
-          ))}
+            {profiles.map((p) => (
+              <div key={p.id} style={{ marginBottom: 10 }}>
+                <span style={{
+                  fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.45)", marginBottom: 6, display: "block",
+                  letterSpacing: "0.05em", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                }}>
+                  {p.name}
+                </span>
+                {renderImagePicker(
+                  "stackBgImages",
+                  params.stackBgImages[p.id] ?? null,
+                  (v) => onChange({ ...params, stackBgImages: { ...params.stackBgImages, [p.id]: v } }),
+                  "Default",
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
