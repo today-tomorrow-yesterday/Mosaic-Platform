@@ -414,6 +414,7 @@ export function DashboardClient({
   const [noTransitionIds, setNoTransitionIds] = useState<string[]>([])
   const [teleportingIds, setTeleportingIds] = useState<string[]>([])
   const [hoveredCard, setHoveredCard] = useState<string | null>(null)
+  const [hoveredStackId, setHoveredStackId] = useState<string | null>(null)
   const bentoCardRefs = useRef(new Map<string, HTMLDivElement>())
   const [glassParams, setGlassParams] = useState<GlassParams>(DEFAULT_GLASS)
   const [labOpen, setLabOpen] = useState(false)
@@ -578,6 +579,7 @@ export function DashboardClient({
     const targetIndex = order.indexOf(targetId)
     if (targetIndex <= 0) return
     setIsAnimating(true)
+    setHoveredStackId(null)
     const idsToSwipe = order.slice(0, targetIndex)
     const swipeClones: SwipingClone[] = idsToSwipe.map((id, idx) => ({
       ...profiles.find(p => p.id === id)!,
@@ -632,12 +634,48 @@ export function DashboardClient({
     const isTeleporting = teleportingIds.includes(profile.id) && !isClone
     const isNoTransition = noTransitionIds.includes('all') || (noTransitionIds.includes(profile.id) && !isClone)
     const isActiveView = stackPosition === 0 || isClone
-    const stackSliceWidth = 100  // px — visible width of a stacked card's spine
+    const stackSliceWidth = 160  // px — wide enough that left border-radius stays hidden behind front card during peek
     const stackOffset = Math.min(55, Math.max(35, containerW * 0.04))
     const isFrontCard = stackPosition === 0 && !isClone
 
     // Profile card positioning — each stack position has its own transform, scale, and rotation.
     const stackTransition = `transform ${STACK_TRANSITION_MS}ms ${EASE_SMOOTH}, opacity ${STACK_TRANSITION_MS}ms ${EASE_SMOOTH}, width ${STACK_TRANSITION_MS}ms ${EASE_SMOOTH}, left ${STACK_TRANSITION_MS}ms ${EASE_SMOOTH}, top ${STACK_TRANSITION_MS}ms ${EASE_SMOOTH}, bottom ${STACK_TRANSITION_MS}ms ${EASE_SMOOTH}`
+
+    // ── Stack Peek Effect (card fan / deck spread) ────────────────────────────
+    //
+    // UX pattern: "anticipatory reveal" — hovering a stacked card causes the
+    // entire stack to fan open, signaling that clicking will advance to that profile.
+    //
+    // The hovered card shifts right to "present" itself.
+    // Cards above it shift left to make room (no rotation on the front card).
+    // Cards below fan out slightly to the right with a subtle tilt.
+    //
+    // All shifts use the existing stackTransition (STACK_TRANSITION_MS + EASE_SMOOTH)
+    // so the fan eases in/out smoothly. Resets when the mouse leaves or a swipe starts.
+    //
+    const hoveredStackPos = hoveredStackId ? order.indexOf(hoveredStackId) : -1
+    let peekShiftX = 0     // horizontal shift in px (negative = left, positive = right)
+    let peekRotateDeg = 0  // additional rotation in degrees on top of STACK_ROTATION_DEG
+    if (!isClone && !isTeleporting && !isAnimating && !expand && hoveredStackPos > 0) {
+      if (hoveredStackPos === stackPosition) {
+        // Hovered card: nudges right to "present" itself from behind the front card
+        peekShiftX = 5
+      } else if (hoveredStackPos === 1 && stackPosition === 0) {
+        // Hovering middle → front card slides left to reveal middle (no rotation — stays stable)
+        peekShiftX = -15
+      } else if (hoveredStackPos === 2 && stackPosition === 0) {
+        // Hovering back → front card slides further left (no rotation)
+        peekShiftX = -20
+      } else if (hoveredStackPos === 2 && stackPosition === 1) {
+        // Hovering back → middle card slides left with a slight counter-tilt
+        peekShiftX = -1
+        peekRotateDeg = -1
+      } else if (hoveredStackPos === 1 && stackPosition === 2) {
+        // Hovering middle → back card fans out to the right with a subtle tilt
+        peekShiftX = 5
+        peekRotateDeg = 2
+      }
+    }
 
     const profileCardStyle: React.CSSProperties = {
       backgroundColor: profile.baseColor,
@@ -656,19 +694,19 @@ export function DashboardClient({
       // Front card: full-width, no rotation, deep shadow
       ...(!isClone && !isTeleporting && stackPosition === 0 && {
         width: activeWidth, left: 0, top: 0, bottom: 0, zIndex: 30,
-        transform: `translateX(0) scale(1) rotate(${STACK_ROTATION_DEG.front}deg) translateZ(0)`, opacity: 1,
+        transform: `translateX(${peekShiftX}px) scale(1) rotate(${STACK_ROTATION_DEG.front + peekRotateDeg}deg) translateZ(0)`, opacity: 1,
         boxShadow: '-20px 0 60px rgba(0,0,0,0.8)',
       }),
       // Middle stack: slight tilt + scale down (scattered paper effect)
       ...(!isClone && !isTeleporting && stackPosition === 1 && {
         width: stackSliceWidth, left: containerW - stackOffset - stackSliceWidth - STACK_INSET_PX.middle, top: 24, bottom: 24, zIndex: 20,
-        transform: `translateX(0) scale(0.96) rotate(${STACK_ROTATION_DEG.middle}deg) translateZ(0)`, opacity: 1,
+        transform: `translateX(${peekShiftX}px) scale(0.96) rotate(${STACK_ROTATION_DEG.middle + peekRotateDeg}deg) translateZ(0)`, opacity: 1,
         boxShadow: '-10px 0 40px rgba(0,0,0,0.6)', cursor: 'pointer',
       }),
       // Back stack: more tilt + more scale down
       ...(!isClone && !isTeleporting && stackPosition === 2 && {
         width: stackSliceWidth, left: containerW - stackSliceWidth - STACK_INSET_PX.back, top: 48, bottom: 48, zIndex: 10,
-        transform: `translateX(0) scale(0.92) rotate(${STACK_ROTATION_DEG.back}deg) translateZ(0)`, opacity: 1, cursor: 'pointer',
+        transform: `translateX(${peekShiftX}px) scale(0.92) rotate(${STACK_ROTATION_DEG.back + peekRotateDeg}deg) translateZ(0)`, opacity: 1, cursor: 'pointer',
       }),
       ...(!isNoTransition && !isClone && { transition: stackTransition }),
     }
@@ -698,6 +736,14 @@ export function DashboardClient({
           if (!isClone && stackPosition > 0 && teleportingIds.length === 0 && !expand) {
             advanceStackToProfile(profile.id)
           }
+        }}
+        onMouseEnter={() => {
+          if (!isClone && stackPosition > 0 && !isAnimating && !expand) {
+            setHoveredStackId(profile.id)
+          }
+        }}
+        onMouseLeave={() => {
+          if (!isClone) setHoveredStackId(null)
         }}
       >
         {/* Animated gradient bg */}
