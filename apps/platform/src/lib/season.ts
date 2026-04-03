@@ -1,14 +1,5 @@
 export type SeasonId = "spring" | "summer" | "fall" | "winter" | "halloween" | "christmas"
 
-/** Client-safe display data — safe to import in "use client" components */
-export const SEASON_META: Record<SeasonId, { label: string; emoji: string; accent: string; tint: string }> = {
-  spring:    { label: "Spring",    emoji: "🌸", accent: "#16a34a", tint: "rgba(22,163,74,0.09)"   },
-  summer:    { label: "Summer",    emoji: "☀️",  accent: "#f97316", tint: "rgba(249,115,22,0.09)"  },
-  fall:      { label: "Fall",      emoji: "🍂", accent: "#b45309", tint: "rgba(180,83,9,0.09)"    },
-  winter:    { label: "Winter",    emoji: "❄️",  accent: "#2563eb", tint: "rgba(37,99,235,0.09)"   },
-  halloween: { label: "Halloween", emoji: "🎃", accent: "#ea580c", tint: "rgba(234,88,12,0.09)"   },
-  christmas: { label: "Christmas", emoji: "🎄", accent: "#dc2626", tint: "rgba(220,38,38,0.09)"   },
-}
 
 interface SeasonTheme {
   id: SeasonId
@@ -103,7 +94,7 @@ export function getSeasonById(id: string | undefined): SeasonTheme {
   return getCurrentSeason()
 }
 
-export function getCurrentSeason(): SeasonTheme {
+function getCurrentSeason(): SeasonTheme {
   const now = new Date()
   const month = now.getMonth() + 1 // 1–12
   const day = now.getDate()

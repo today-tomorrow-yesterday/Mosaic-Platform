@@ -670,7 +670,7 @@ export function DashboardClient({
         peekShiftX = -20
       } else if (hoveredStackPos === 2 && stackPosition === 1) {
         // Hovering back → middle card slides left with a slight counter-tilt
-        peekShiftX = -1
+        peekShiftX = -16
         peekRotateDeg = -1
       } else if (hoveredStackPos === 1 && stackPosition === 2) {
         // Hovering middle → back card fans out to the right with a subtle tilt

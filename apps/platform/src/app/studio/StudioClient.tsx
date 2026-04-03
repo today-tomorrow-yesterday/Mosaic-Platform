@@ -231,7 +231,7 @@ function TypingDots() {
   )
 }
 
-function BuildProgress({ step }: { step: BuildStep }) {
+function BuildProgress({ step, dark = false }: { step: BuildStep; dark?: boolean }) {
   return (
     <div className="space-y-2 px-1 py-1">
       {BUILD_STEPS.map((label, i) => {
@@ -245,12 +245,16 @@ function BuildProgress({ step }: { step: BuildStep }) {
             ) : active ? (
               <Loader2 className="w-3.5 h-3.5 flex-shrink-0 animate-spin" style={{ color: "var(--s-accent)" }} />
             ) : (
-              <Circle className="w-3.5 h-3.5 flex-shrink-0 text-zinc-200" />
+              <Circle className={`w-3.5 h-3.5 flex-shrink-0 ${dark ? "text-white/15" : "text-zinc-200"}`} />
             )}
             <span
               className="text-xs font-body"
               style={{
-                color: done ? "#9ca3af" : active ? "var(--s-text-primary)" : "#d1d5db",
+                color: done
+                  ? (dark ? "rgba(255,255,255,0.3)" : "#9ca3af")
+                  : active
+                    ? (dark ? "rgba(255,255,255,0.9)" : "var(--s-text-primary)")
+                    : (dark ? "rgba(255,255,255,0.35)" : "#d1d5db"),
                 fontWeight: active ? 500 : 400,
                 textDecoration: done ? "line-through" : "none",
               }}
@@ -267,33 +271,28 @@ function BuildProgress({ step }: { step: BuildStep }) {
 function EmptyState({ onSuggestion }: { onSuggestion: (prompt: string) => void }) {
   return (
     <div className="flex flex-col items-center justify-center h-full px-5 py-8 text-center">
-      <div
-        className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5"
-        style={{ background: "color-mix(in srgb, var(--s-accent) 12%, transparent)" }}
-      >
-        <Wand2 className="w-6 h-6" style={{ color: "var(--s-accent)" }} strokeWidth={1.5} />
+      <div className="relative mb-5">
+        <div className="absolute inset-0 rounded-2xl blur-2xl opacity-50 pointer-events-none" style={{ background: "color-mix(in srgb, var(--s-accent) 40%, transparent)", transform: "scale(1.6)" }} />
+        <div className="relative w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)" }}>
+          <Wand2 className="w-5 h-5" style={{ color: "var(--s-accent)" }} strokeWidth={1.5} />
+        </div>
       </div>
-
-      <h2
-        className="font-display font-medium text-zinc-800 mb-2"
-        style={{ fontSize: 20, letterSpacing: "-0.01em" }}
-      >
+      <h2 className="font-display font-medium mb-2" style={{ fontSize: 18, letterSpacing: "-0.02em", color: "rgba(255,255,255,0.85)" }}>
         What would you like to build?
       </h2>
-      <p className="font-body text-sm text-zinc-400 leading-relaxed mb-7" style={{ maxWidth: 260 }}>
-        Describe any idea in plain language. No coding required.
+      <p className="font-body text-sm leading-relaxed mb-6" style={{ maxWidth: 240, color: "rgba(255,255,255,0.35)" }}>
+        Describe any idea in plain language.
       </p>
-
-      <div className="flex flex-wrap gap-2 justify-center">
+      <div className="flex flex-wrap gap-1.5 justify-center">
         {SUGGESTIONS.map(s => (
           <button
             key={s.label}
             onClick={() => onSuggestion(s.prompt)}
             className="font-body text-xs px-3 py-1.5 rounded-full transition-all duration-150 hover:scale-[1.03] active:scale-95"
             style={{
-              background: "color-mix(in srgb, var(--s-accent) 8%, transparent)",
-              color: "var(--s-accent)",
-              border: "1px solid color-mix(in srgb, var(--s-accent) 22%, transparent)",
+              background: "rgba(255,255,255,0.06)",
+              color: "rgba(255,255,255,0.55)",
+              border: "1px solid rgba(255,255,255,0.09)",
             }}
           >
             {s.label}
@@ -488,35 +487,26 @@ function PreviewEmpty({ isBuilding, buildStep }: { isBuilding: boolean; buildSte
     <div className="flex flex-col items-center justify-center h-full text-center px-8">
       {isBuilding ? (
         <>
-          <div
-            className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
-            style={{ background: "color-mix(in srgb, var(--s-accent) 10%, transparent)" }}
-          >
-            <Wand2
-              className="w-7 h-7"
-              style={{ color: "var(--s-accent)", animation: "spin 2s linear infinite" }}
-              strokeWidth={1.5}
-            />
+          <div className="relative mb-5">
+            <div className="absolute inset-0 rounded-3xl blur-2xl opacity-60 pointer-events-none" style={{ background: "color-mix(in srgb, var(--s-accent) 50%, transparent)", transform: "scale(1.8)" }} />
+            <div className="relative w-16 h-16 rounded-3xl flex items-center justify-center" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)" }}>
+              <Wand2 className="w-7 h-7" style={{ color: "var(--s-accent)", animation: "spin 2s linear infinite" }} strokeWidth={1.5} />
+            </div>
           </div>
-          <p
-            className="font-body text-sm font-medium mb-4"
-            style={{ color: "var(--s-text-primary)" }}
-          >
-            Building your app…
-          </p>
+          <p className="font-body text-sm font-medium mb-5" style={{ color: "rgba(255,255,255,0.7)" }}>Building your app…</p>
           {buildStep > 0 && (
             <div className="text-left">
-              <BuildProgress step={buildStep} />
+              <BuildProgress step={buildStep} dark />
             </div>
           )}
         </>
       ) : (
         <>
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 bg-zinc-100">
-            <Monitor className="w-7 h-7 text-zinc-300" strokeWidth={1.5} />
+          <div className="w-16 h-16 rounded-3xl flex items-center justify-center mb-4" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+            <Monitor className="w-7 h-7" style={{ color: "rgba(255,255,255,0.2)" }} strokeWidth={1.5} />
           </div>
-          <p className="font-body text-sm font-medium text-zinc-400 mb-1">Your app will appear here</p>
-          <p className="font-body text-xs text-zinc-300">Describe what you want to build in the chat</p>
+          <p className="font-body text-sm font-medium mb-1" style={{ color: "rgba(255,255,255,0.4)" }}>Your app will appear here</p>
+          <p className="font-body text-xs" style={{ color: "rgba(255,255,255,0.2)" }}>Describe what you want to build in the chat</p>
         </>
       )}
     </div>
@@ -576,18 +566,20 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     <>
       <div className="fixed inset-0 z-40" onClick={onClose} />
       <div
-        className="absolute right-0 top-full mt-1 w-56 rounded-2xl bg-white border border-zinc-200 shadow-xl z-50 overflow-hidden animate-dropdown-in"
+        className="absolute right-0 top-full mt-2 w-60 rounded-2xl z-50 overflow-hidden animate-dropdown-in p-1.5"
+        style={{ background: "rgba(18,16,28,0.97)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 24px 64px rgba(0,0,0,0.7), 0 4px 16px rgba(0,0,0,0.5)" }}
       >
         {items.map(item => (
           <button
             key={item.label}
             onClick={item.onClick}
-            className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-zinc-50 transition-colors"
+            className="w-full flex items-start gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-150 hover:bg-white/8"
+            style={{ color: "rgba(255,255,255,0.65)" }}
           >
-            <item.icon className="w-4 h-4 text-zinc-400 mt-0.5 flex-shrink-0" />
+            <item.icon className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: "rgba(255,255,255,0.4)" }} />
             <div>
-              <p className="font-body text-sm font-medium text-zinc-700">{item.label}</p>
-              <p className="font-body text-xs text-zinc-400">{item.desc}</p>
+              <p className="font-body text-sm font-medium" style={{ color: "rgba(255,255,255,0.8)" }}>{item.label}</p>
+              <p className="font-body text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>{item.desc}</p>
             </div>
           </button>
         ))}
@@ -855,18 +847,24 @@ export function StudioClient() {
   // ── Root layout ───────────────────────────────────────────────────────────
 
   return (
-    <div className="h-screen flex flex-col bg-white overflow-hidden">
+    <div className="h-screen flex flex-col overflow-hidden" style={{ background: "radial-gradient(ellipse 140% 90% at 50% -5%, #1e1a38 0%, #0e0c1e 35%, #080614 70%, #060410 100%)" }}>
 
       {/* ── Header ── */}
-      <header className="flex-shrink-0 h-14 border-b border-zinc-100 flex items-center justify-between px-4 gap-3">
+      <header
+        className="flex-shrink-0 h-14 flex items-center justify-between px-4 gap-3 relative z-10"
+        style={{ background: "rgba(10,9,20,0.75)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}
+      >
         <div className="flex items-center gap-3 min-w-0">
           <Link
             href="/"
-            className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors flex-shrink-0"
+            className="w-8 h-8 rounded-full flex items-center justify-center transition-colors flex-shrink-0"
+            style={{ color: "rgba(255,255,255,0.4)" }}
+            onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.08)"; (e.currentTarget as HTMLAnchorElement).style.color = "rgba(255,255,255,0.9)" }}
+            onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; (e.currentTarget as HTMLAnchorElement).style.color = "rgba(255,255,255,0.4)" }}
           >
             <ArrowLeft className="w-4 h-4" />
           </Link>
-          <div className="w-px h-4 bg-zinc-200 flex-shrink-0" />
+          <div className="w-px h-4 flex-shrink-0" style={{ background: "rgba(255,255,255,0.1)" }} />
           {isEditingName ? (
             <input
               ref={nameInputRef}
@@ -874,20 +872,17 @@ export function StudioClient() {
               onChange={e => setAppName(e.target.value)}
               onBlur={() => setIsEditingName(false)}
               onKeyDown={e => { if (e.key === "Enter" || e.key === "Escape") setIsEditingName(false) }}
-              className="font-body text-sm font-medium text-zinc-800 bg-transparent border-b-2 focus:outline-none px-0.5 min-w-[100px] max-w-[200px]"
-              style={{ borderBottomColor: "var(--s-accent)" }}
+              className="font-body text-sm font-medium bg-transparent border-b-2 focus:outline-none px-0.5 min-w-[100px] max-w-[200px]"
+              style={{ borderBottomColor: "var(--s-accent)", color: "rgba(255,255,255,0.9)", caretColor: "white" }}
             />
           ) : (
-            <button
-              onClick={() => setIsEditingName(true)}
-              className="group flex items-center gap-1.5 hover:opacity-70 transition-opacity truncate"
-            >
-              <span className="font-body text-sm font-medium text-zinc-800 truncate">{appName}</span>
-              <Pencil className="w-3 h-3 text-zinc-300 group-hover:text-zinc-500 transition-colors flex-shrink-0" />
+            <button onClick={() => setIsEditingName(true)} className="group flex items-center gap-1.5 hover:opacity-70 transition-opacity truncate">
+              <span className="font-body text-sm font-medium truncate" style={{ color: "rgba(255,255,255,0.85)" }}>{appName}</span>
+              <Pencil className="w-3 h-3 flex-shrink-0 transition-colors" style={{ color: "rgba(255,255,255,0.2)" }} />
             </button>
           )}
           {isSaved && (
-            <span className="hidden sm:flex items-center gap-1 font-body text-[10px] text-emerald-500">
+            <span className="hidden sm:flex items-center gap-1 font-body text-[10px]" style={{ color: "#34d399" }}>
               <Check className="w-3 h-3" /> Saved
             </span>
           )}
@@ -897,10 +892,13 @@ export function StudioClient() {
           {code && (
             <button
               onClick={handleHeaderCopy}
-              className="hidden sm:flex items-center gap-1.5 h-8 px-3 rounded-full font-body text-xs font-medium text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 transition-colors"
+              className="hidden sm:flex items-center gap-1.5 h-8 px-3 rounded-full font-body text-xs font-medium transition-all duration-150"
+              style={{ color: "rgba(255,255,255,0.45)", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.85)"; (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.1)" }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.45)"; (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.05)" }}
             >
               {headerCopied
-                ? <><Check className="w-3.5 h-3.5 text-emerald-500" /> Copied!</>
+                ? <><Check className="w-3.5 h-3.5" style={{ color: "#34d399" }} /> Copied!</>
                 : <><Copy className="w-3.5 h-3.5" /> Copy code</>
               }
             </button>
@@ -910,16 +908,20 @@ export function StudioClient() {
             onClick={() => void handleSave()}
             className="h-8 px-4 rounded-full font-body text-xs font-semibold transition-all"
             style={{
-              background: code && !isSaving ? "var(--s-accent)" : "#e4e7eb",
-              color:      code && !isSaving ? "white"           : "#9ca3af",
+              background: code && !isSaving ? "var(--s-accent)" : "rgba(255,255,255,0.07)",
+              color:      code && !isSaving ? "white"           : "rgba(255,255,255,0.2)",
               cursor:     code && !isSaving ? "pointer"         : "not-allowed",
+              boxShadow:  code && !isSaving ? "0 0 20px color-mix(in srgb, var(--s-accent) 35%, transparent)" : "none",
             }}
           >
             {isSaving ? "Saving…" : isSaved ? "Saved" : "Save"}
           </button>
           <button
             onClick={() => setShowOverflow(v => !v)}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 transition-colors"
+            className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+            style={{ color: "rgba(255,255,255,0.35)" }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.08)"; (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.8)" }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.35)" }}
           >
             <MoreHorizontal className="w-4 h-4" />
           </button>
@@ -935,45 +937,36 @@ export function StudioClient() {
 
       {/* ── Phase 1: Fullscreen hero (no content yet) ── */}
       {!hasContent && (
-        <div className="flex-1 flex flex-col items-center justify-center px-6 relative overflow-hidden bg-white">
-          {/* Subtle dot grid */}
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              backgroundImage: "radial-gradient(circle, #d1d5db 1px, transparent 1px)",
-              backgroundSize: "28px 28px",
-              opacity: 0.45,
-            }}
-          />
-          {/* Soft radial fade over dots to focus center */}
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background: "radial-gradient(ellipse 70% 60% at 50% 50%, transparent 30%, white 100%)",
-            }}
-          />
+        <div className="flex-1 flex flex-col items-center justify-center px-6 relative overflow-hidden">
+          {/* Large ambient bloom */}
+          <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 80% 60% at 50% 40%, color-mix(in srgb, var(--s-accent) 14%, transparent) 0%, transparent 65%)" }} />
+          {/* Subtle star-field */}
+          <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.14) 1px, transparent 1px)", backgroundSize: "52px 52px", opacity: 0.35 }} />
 
-          <div className="relative z-10 flex flex-col items-center text-center w-full max-w-lg">
-            <div
-              className="w-16 h-16 rounded-3xl flex items-center justify-center mb-7"
-              style={{ background: "color-mix(in srgb, var(--s-accent) 12%, transparent)" }}
-            >
-              <Wand2 className="w-7 h-7" style={{ color: "var(--s-accent)" }} strokeWidth={1.5} />
+          <div className="relative z-10 flex flex-col items-center text-center w-full max-w-xl">
+            {/* Icon orb */}
+            <div className="relative mb-8">
+              <div className="absolute rounded-full blur-3xl opacity-60 pointer-events-none" style={{ inset: -40, background: "color-mix(in srgb, var(--s-accent) 30%, transparent)" }} />
+              <div className="relative w-20 h-20 rounded-[28px] flex items-center justify-center" style={{ background: "rgba(255,255,255,0.07)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.14)", boxShadow: "0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.18)" }}>
+                <Wand2 className="w-9 h-9" style={{ color: "var(--s-accent)" }} strokeWidth={1.5} />
+              </div>
             </div>
 
-            <h1
-              className="font-display font-semibold text-zinc-800 mb-3"
-              style={{ fontSize: "clamp(22px, 4vw, 30px)", letterSpacing: "-0.02em", lineHeight: 1.2 }}
-            >
-              What would you like to build?
+            <h1 className="font-display font-semibold mb-4" style={{ fontSize: "clamp(32px, 5vw, 52px)", letterSpacing: "-0.03em", lineHeight: 1.1, color: "rgba(255,255,255,0.92)" }}>
+              What would you like<br />to build?
             </h1>
-            <p className="font-body text-[15px] text-zinc-400 mb-8 leading-relaxed" style={{ maxWidth: 340 }}>
+            <p className="font-body mb-10 leading-relaxed" style={{ fontSize: 16, maxWidth: 360, color: "rgba(255,255,255,0.38)" }}>
               Describe any app in plain language — no coding required.
             </p>
 
-            {/* Input */}
-            <div className="w-full rounded-2xl border border-zinc-200 bg-white shadow-sm overflow-hidden focus-within:border-zinc-300 focus-within:shadow-md transition-all duration-200">
-              <div className="flex items-end gap-2 p-3">
+            {/* Glass input card */}
+            <div
+              className="w-full rounded-3xl overflow-hidden transition-all duration-300"
+              style={{ background: "rgba(255,255,255,0.06)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.12)", boxShadow: "0 8px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)" }}
+              onFocusCapture={e => { const el = e.currentTarget as HTMLDivElement; el.style.boxShadow = `0 0 0 1px var(--s-accent), 0 8px 60px rgba(0,0,0,0.5), 0 0 80px color-mix(in srgb, var(--s-accent) 12%, transparent), inset 0 1px 0 rgba(255,255,255,0.1)`; el.style.borderColor = "color-mix(in srgb, var(--s-accent) 70%, rgba(255,255,255,0.12))" }}
+              onBlurCapture={e => { const el = e.currentTarget as HTMLDivElement; el.style.boxShadow = "0 8px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)"; el.style.borderColor = "rgba(255,255,255,0.12)" }}
+            >
+              <div className="flex items-end gap-3 p-4">
                 <textarea
                   ref={textareaRef}
                   value={input}
@@ -982,40 +975,44 @@ export function StudioClient() {
                   placeholder="A daily habit tracker with streaks and a weekly grid…"
                   rows={2}
                   disabled={isBuilding}
-                  className="flex-1 bg-transparent resize-none focus:outline-none text-sm text-zinc-700 placeholder:text-zinc-400 leading-relaxed font-body disabled:opacity-50"
-                  style={{ maxHeight: 120 }}
+                  className="flex-1 bg-transparent resize-none focus:outline-none leading-relaxed font-body disabled:opacity-50 placeholder:text-white/25"
+                  style={{ maxHeight: 120, fontSize: 15, color: "rgba(255,255,255,0.85)", caretColor: "white" }}
                 />
                 <button
                   onClick={() => void handleSend()}
                   disabled={!input.trim() || isBuilding}
-                  className="w-9 h-9 rounded-full flex items-center justify-center transition-all flex-shrink-0 self-end disabled:cursor-not-allowed"
+                  className="w-10 h-10 rounded-2xl flex items-center justify-center transition-all flex-shrink-0 self-end disabled:cursor-not-allowed"
                   style={{
-                    background: input.trim() && !isBuilding ? "var(--s-accent)" : "#e4e7eb",
-                    color:      input.trim() && !isBuilding ? "white"           : "#9ca3af",
+                    background: input.trim() && !isBuilding ? "var(--s-accent)" : "rgba(255,255,255,0.08)",
+                    color:      input.trim() && !isBuilding ? "white"           : "rgba(255,255,255,0.25)",
+                    boxShadow:  input.trim() && !isBuilding ? "0 4px 20px color-mix(in srgb, var(--s-accent) 40%, transparent)" : "none",
                   }}
                 >
-                  <Send className="w-3.5 h-3.5" />
+                  <Send className="w-4 h-4" />
                 </button>
               </div>
-              <div className="px-4 pb-2.5">
-                <p className="font-body text-[10px] text-zinc-400">
+              <div className="px-5 pb-4">
+                <p className="font-body text-[11px]" style={{ color: "rgba(255,255,255,0.2)" }}>
                   Enter to send · Shift+Enter for new line
                 </p>
               </div>
             </div>
 
             {/* Suggestion chips */}
-            <div className="flex flex-wrap gap-2 justify-center mt-6">
+            <div className="flex flex-wrap gap-2 justify-center mt-7">
               {SUGGESTIONS.map(s => (
                 <button
                   key={s.label}
                   onClick={() => void handleSend(s.prompt)}
-                  className="font-body text-xs px-3 py-1.5 rounded-full transition-all duration-150 hover:scale-[1.03] active:scale-95"
+                  className="font-body text-xs px-4 py-2 rounded-full transition-all duration-150 hover:scale-[1.03] active:scale-95"
                   style={{
-                    background: "color-mix(in srgb, var(--s-accent) 8%, transparent)",
-                    color: "var(--s-accent)",
-                    border: "1px solid color-mix(in srgb, var(--s-accent) 22%, transparent)",
+                    background: "rgba(255,255,255,0.06)",
+                    color: "rgba(255,255,255,0.5)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    backdropFilter: "blur(8px)",
                   }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.1)"; (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.85)" }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.06)"; (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.5)" }}
                 >
                   {s.label}
                 </button>
@@ -1130,24 +1127,24 @@ export function StudioClient() {
                 ${activeTab === "chat" ? "hidden md:flex" : "flex"}`}
             >
               {/* Preview toolbar */}
-              <div className="flex-shrink-0 h-11 border-b border-zinc-100 bg-white flex items-center justify-between px-4">
+              <div className="flex-shrink-0 h-11 flex items-center justify-between px-4" style={{ background: "rgba(10,9,20,0.6)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
                 <div className="flex items-center gap-2">
-                  <Monitor className="w-3.5 h-3.5 text-zinc-400" />
-                  <span className="font-body text-[11px] font-semibold uppercase tracking-widest text-zinc-400">
+                  <Monitor className="w-3.5 h-3.5" style={{ color: "rgba(255,255,255,0.22)" }} />
+                  <span className="font-body text-[11px] font-semibold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.22)" }}>
                     Preview
                   </span>
-                  {code && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" />}
+                  {code && <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: "#34d399" }} />}
                 </div>
-                <div className="flex items-center gap-0.5 bg-zinc-100 rounded-lg p-0.5">
+                <div className="flex items-center gap-0.5 rounded-lg p-0.5" style={{ background: "rgba(255,255,255,0.08)" }}>
                   {([["desktop", Monitor], ["mobile", Smartphone]] as const).map(([mode, Icon]) => (
                     <button
                       key={mode}
                       onClick={() => setPreviewMode(mode)}
                       className="w-7 h-6 flex items-center justify-center rounded-md transition-all"
                       style={{
-                        background:  previewMode === mode ? "white" : "transparent",
-                        color:       previewMode === mode ? "var(--s-accent)" : "#9ca3af",
-                        boxShadow:   previewMode === mode ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+                        background: previewMode === mode ? "rgba(255,255,255,0.15)" : "transparent",
+                        color:      previewMode === mode ? "var(--s-accent)"         : "rgba(255,255,255,0.3)",
+                        boxShadow:  previewMode === mode ? "0 1px 4px rgba(0,0,0,0.3)" : "none",
                       }}
                       aria-label={`${mode} preview`}
                     >
@@ -1158,7 +1155,14 @@ export function StudioClient() {
               </div>
 
               {/* Preview content */}
-              <div className="flex-1 overflow-auto p-4 lg:p-6 flex items-start justify-center bg-zinc-50/60 min-h-0">
+              <div
+                className="flex-1 overflow-auto p-6 lg:p-8 flex items-start justify-center min-h-0"
+                style={{
+                  background: "#080614",
+                  backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px)",
+                  backgroundSize: "24px 24px",
+                }}
+              >
                 {!code ? (
                   <PreviewEmpty isBuilding={isBuilding} buildStep={buildStep} />
                 ) : (
@@ -1185,10 +1189,10 @@ export function StudioClient() {
 
                     {/* Error overlay */}
                     {previewError && (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center rounded-2xl bg-red-50/95 backdrop-blur-sm p-6 text-center">
-                        <AlertCircle className="w-8 h-8 text-red-400 mb-3" />
-                        <p className="font-body text-sm font-semibold text-red-700 mb-1">Preview error</p>
-                        <p className="font-body text-xs text-red-500 mb-5 max-w-xs leading-relaxed">{previewError}</p>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center rounded-2xl p-6 text-center" style={{ background: "rgba(20,8,8,0.95)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", border: "1px solid rgba(239,68,68,0.25)" }}>
+                        <AlertCircle className="w-8 h-8 mb-3" style={{ color: "#f87171" }} />
+                        <p className="font-body text-sm font-semibold mb-1" style={{ color: "#fca5a5" }}>Preview error</p>
+                        <p className="font-body text-xs mb-5 max-w-xs leading-relaxed" style={{ color: "rgba(252,165,165,0.7)" }}>{previewError}</p>
                         <button
                           onClick={() => void handleSend(`The preview had a JavaScript error: "${previewError}". Please fix it.`)}
                           className="font-body text-xs font-semibold px-4 py-2 rounded-full text-white transition-colors"
