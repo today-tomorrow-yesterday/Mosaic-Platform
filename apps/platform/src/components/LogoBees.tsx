@@ -255,12 +255,14 @@ export function LogoBees({ season }: Props) {
                   top: "50%",
                   animation: `bee-orbit-${bee.path} ${bee.duration}s ease-in-out infinite`,
                   animationDelay: `${bee.delay}s`,
+                  willChange: "transform",
                 }}
               >
                 <div
                   style={{
                     animation: "bee-buzz 0.28s ease-in-out infinite",
                     animationDelay: `${bee.delay * 0.3}s`,
+                    willChange: "transform",
                     fontSize: bee.size,
                     lineHeight: 1,
                     userSelect: "none",

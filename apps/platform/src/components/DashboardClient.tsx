@@ -46,7 +46,7 @@ const STACK_INSET_PX = { middle: 11, back: 16 }
  *  Uses power-1.5 easing curve for organic ramp-up (see specimen diagnostics pattern).
  *  ⚠️ LOCKED — maxScaleIncrease=0.02 is the agreed maximum. Do not exceed. */
 const PROXIMITY_CONFIG = {
-  triggerDistancePx: 150,    // how far from a card's bounding box the effect begins
+  triggerDistancePx: 75,     // how far from a card's bounding box the effect begins
   maxScaleIncrease: 0.02,    // 1.02 at closest approach — DO NOT EXCEED
   maxLiftPx: -4,             // 4px upward lift at closest approach
   easingPower: 1.5,          // power curve for smooth organic ramp
@@ -295,6 +295,8 @@ function AvatarDropdown({ avatarUrl }: { avatarUrl?: string }) {
           width: 232,
           background: 'rgba(14, 14, 18, 0.97)',
           backdropFilter: 'blur(12px)',
+          willChange: 'transform',
+          transform: 'translateZ(0)',
           border: '1px solid rgba(255,255,255,0.1)',
           borderRadius: 16,
           boxShadow: '0 8px 32px rgba(0,0,0,0.8), 0 2px 8px rgba(0,0,0,0.6)',
@@ -784,7 +786,7 @@ export function DashboardClient({
           pointerEvents: isActiveView ? 'none' : 'auto',
           transition: 'opacity 300ms',
         }}>
-          <div className="flex flex-col items-center justify-center gap-6 opacity-50 group-hover:opacity-100 transition-all duration-300">
+          <div className="flex flex-col items-center justify-center gap-6 opacity-50 group-hover:opacity-100 transition-opacity duration-300">
             {profile.avatar
               ? <img src={profile.avatar} style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)' }} className="opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-transform duration-300" alt={profile.name} />
               : profile.icon && <profile.icon size={16} color="white" />
@@ -1161,13 +1163,13 @@ export function DashboardClient({
                             <a
                               href={card.href}
                               onClick={e => e.stopPropagation()}
-                              className="h-11 px-5 rounded-full bg-white/10 hover:bg-white text-white hover:text-black flex items-center justify-center gap-2 transition-all duration-300 text-sm font-medium no-underline"
+                              className="h-11 px-5 rounded-full bg-white/10 hover:bg-white text-white hover:text-black flex items-center justify-center gap-2 transition-colors duration-300 text-sm font-medium no-underline"
                             >
                               Open <ArrowUpRight className="w-4 h-4" />
                             </a>
                             <button
                               onClick={collapseCard}
-                              className="w-11 h-11 rounded-full bg-white/10 hover:bg-white text-white hover:text-black flex items-center justify-center transition-all duration-300 shadow-2xl group/close"
+                              className="w-11 h-11 rounded-full bg-white/10 hover:bg-white text-white hover:text-black flex items-center justify-center transition-colors duration-300 shadow-2xl group/close"
                             >
                               <X className="w-5 h-5 group-hover/close:rotate-90 transition-transform duration-300" />
                             </button>
@@ -1203,13 +1205,13 @@ export function DashboardClient({
                                       <div style={{ color: card.iconColor }} className="font-mono text-xs lg:text-sm">0{i + 1}</div>
                                       <div className="text-lg lg:text-xl text-white font-medium">{activity}</div>
                                     </div>
-                                    <ChevronRight className="w-5 h-5 text-gray-600 group-hover/activity:text-white group-hover/activity:translate-x-1 transition-all duration-300" />
+                                    <ChevronRight className="w-5 h-5 text-gray-600 group-hover/activity:text-white group-hover/activity:translate-x-1 transition-[color,transform] duration-300" />
                                   </div>
                                 ))}
                                 <a
                                   href={card.href}
                                   onClick={e => e.stopPropagation()}
-                                  className="group/add flex-1 rounded-[24px] border-2 border-dashed border-white/10 flex items-center justify-center gap-3 text-gray-500 hover:text-white hover:border-white/30 transition-all duration-300 text-base lg:text-lg font-medium min-h-0 no-underline"
+                                  className="group/add flex-1 rounded-[24px] border-2 border-dashed border-white/10 flex items-center justify-center gap-3 text-gray-500 hover:text-white hover:border-white/30 transition-colors duration-300 text-base lg:text-lg font-medium min-h-0 no-underline"
                                 >
                                   <Plus className="w-5 h-5 group-hover/add:rotate-90 transition-transform duration-300" />
                                   Open {card.label}
