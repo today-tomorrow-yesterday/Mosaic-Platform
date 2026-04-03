@@ -472,6 +472,13 @@ export function DashboardClient({
       }
     })
 
+    // Set global focus intensity on the active view container so chrome panels can read it.
+    // activeViewRef is the common parent of both chrome panels and the bento grid.
+    const activeEl = activeViewRef.current
+    if (activeEl) {
+      activeEl.style.setProperty('--prox-focus', String(focusedIntensity))
+    }
+
     // Pass 2: focused card scales up (no dim), siblings dim proportionally
     bentoCardRefs.current.forEach((node, id) => {
       if (!node) return
@@ -483,9 +490,10 @@ export function DashboardClient({
         node.style.setProperty('--prox-y', `${maxLiftPx * intensity}px`)
         node.style.setProperty('--prox-dim', '0')
       } else {
-        // Sibling: reset scale, dim based on how close the mouse is to the focused card
+        // Sibling: shrink + dim based on how close the mouse is to the focused card
         // focusedIntensity * 0.35 = max 35% dark overlay when mouse is directly on the focused card
-        node.style.setProperty('--prox-scale', '1')
+        // focusedIntensity * 0.08 = max 8% shrink (scale 0.92) when mouse is directly on the focused card
+        node.style.setProperty('--prox-scale', String(1 - focusedIntensity * 0.03))
         node.style.setProperty('--prox-y', '0px')
         node.style.setProperty('--prox-dim', String(focusedIntensity * 0.35))
       }
@@ -500,6 +508,8 @@ export function DashboardClient({
       node.style.setProperty('--prox-y', '0px')
       node.style.setProperty('--prox-dim', '0')
     })
+    const activeEl = activeViewRef.current
+    if (activeEl) activeEl.style.setProperty('--prox-focus', '0')
     setHoveredCard(null)
   }, [])
 
@@ -716,12 +726,22 @@ export function DashboardClient({
     // Chrome panel slide — hides header/greeting when a bento card is expanding to full-screen.
     // Duration is synced to the expand animation for coordinated motion.
     const expandDur = expand?.dur ?? CARD_EXPAND_FALLBACK_MS
-    const chromeSlideY = isExpanding ? -80 : isHoveringAnyCard ? -60 : 0
-    const chromeOpacity = isExpanding ? 0 : isHoveringAnyCard ? 0.2 : 1
+    // Chrome slides up proportionally to proximity focus intensity (--prox-focus: 0→1).
+    // When expanding a bento card, it overrides to fully hidden.
+    const chromeTransform = isExpanding
+      ? 'translateY(-80px)'
+      : 'translateY(calc(var(--prox-focus, 0) * -60px))'
+    const chromeOpacityVal = isExpanding
+      ? 0
+      : 'calc(1 - var(--prox-focus, 0) * 0.8)'
     const chromeDur = isHoveringAnyCard && !isExpanding ? STACK_TRANSITION_MS : expandDur * 0.6
     const chromeTransition = `transform ${chromeDur}ms ${EASE_SMOOTH}, opacity ${chromeDur}ms ease`
-    const greetingSlideY = isExpanding ? -40 : isHoveringAnyCard ? -25 : 0
-    const greetingOpacity = isExpanding ? 0 : isHoveringAnyCard ? 0.3 : 1
+    const greetingTransform = isExpanding
+      ? 'translateY(-40px)'
+      : 'translateY(calc(var(--prox-focus, 0) * -25px))'
+    const greetingOpacityVal = isExpanding
+      ? 0
+      : 'calc(1 - var(--prox-focus, 0) * 0.7)'
     const greetingDur = isHoveringAnyCard && !isExpanding ? STACK_TRANSITION_MS : expandDur * 0.5
     const greetingTransition = `transform ${greetingDur}ms ${EASE_SMOOTH}, opacity ${greetingDur}ms ease`
 
@@ -813,7 +833,7 @@ export function DashboardClient({
             style={{
               position: 'absolute', top: -1, left: -1, backgroundColor: CHROME_BG, borderBottomRightRadius: 28,
               zIndex: 40, paddingLeft: 6, paddingBottom: 5,
-              transform: `translateY(${chromeSlideY}px)`, opacity: chromeOpacity, transition: chromeTransition,
+              transform: chromeTransform, opacity: chromeOpacityVal, transition: chromeTransition,
               pointerEvents: isExpanding ? 'none' : 'auto',
               ...swipeOutDelayStyle,
             }}
@@ -859,7 +879,7 @@ export function DashboardClient({
             style={{
               position: 'absolute', top: -1, right: -1, backgroundColor: CHROME_BG, borderBottomLeftRadius: 28,
               zIndex: 40, paddingRight: 6, paddingBottom: 5,
-              transform: `translateY(${chromeSlideY}px)`, opacity: chromeOpacity, transition: chromeTransition,
+              transform: chromeTransform, opacity: chromeOpacityVal, transition: chromeTransition,
               pointerEvents: isExpanding ? 'none' : 'auto',
               ...swipeOutDelayStyle,
             }}
@@ -888,8 +908,8 @@ export function DashboardClient({
               className={swipeOutFadeClass}
               style={{
                 marginTop: 80, marginBottom: 28,
-                transform: `translateY(${greetingSlideY}px)`,
-                opacity: greetingOpacity,
+                transform: greetingTransform,
+                opacity: greetingOpacityVal,
                 transition: greetingTransition,
                 ...swipeOutDelayStyle,
               }}
