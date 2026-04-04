@@ -643,7 +643,7 @@ export function GlassLabPanel({ params, onChange, onClose, profiles }: GlassLabP
             justifyContent: "space-between", padding: "0 16px", borderBottom: `1px solid ${D.divider}`,
             animation: closing
               ? "glabElOut 100ms ease both"
-              : "glabElIn 360ms cubic-bezier(0.22,1,0.36,1) 880ms both",
+              : "glabElIn 360ms cubic-bezier(0.22,1,0.36,1) 580ms both",
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div style={{ width: 24, height: 3, borderRadius: 2, background: "rgba(255,255,255,0.12)" }} />
@@ -662,7 +662,7 @@ export function GlassLabPanel({ params, onChange, onClose, profiles }: GlassLabP
             padding: "0 8px", gap: 2, borderBottom: `1px solid ${D.divider}`,
             animation: closing
               ? "glabElOut 80ms ease both"
-              : "glabElIn 360ms cubic-bezier(0.22,1,0.36,1) 960ms both",
+              : "glabElIn 360ms cubic-bezier(0.22,1,0.36,1) 660ms both",
           }}>
             {tabs.map(t => (
               <button key={t.id} onClick={() => setTab(t.id)}
@@ -682,7 +682,7 @@ export function GlassLabPanel({ params, onChange, onClose, profiles }: GlassLabP
           <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column",
             animation: closing
               ? "glabElOut 60ms ease both"
-              : "glabElIn 360ms cubic-bezier(0.22,1,0.36,1) 1040ms both",
+              : "glabElIn 360ms cubic-bezier(0.22,1,0.36,1) 740ms both",
           }}>
 
             {/* ── Card Look ── */}
