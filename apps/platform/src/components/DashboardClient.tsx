@@ -703,7 +703,10 @@ export function DashboardClient({
       return () => clearTimeout(t)
     }
     if (expand.phase === 'settling') {
-      requestAnimationFrame(() => setExpand(null))
+      requestAnimationFrame(() => {
+        setExpand(null)
+        resetProximityHoverEffects()
+      })
     }
     return undefined
   }, [expand?.phase]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -919,7 +922,8 @@ export function DashboardClient({
         {/* Stack background — per-stack type + image, animated only on front card */}
         {(() => {
           const sb = glassParams.stackBackgrounds[profile.id]
-          const effectiveBgType = sb?.backgroundType ?? glassParams.backgroundType
+          // In studio/builder mode, always force graph canvas — ignore user's bg selection
+          const effectiveBgType = (isFrontCard && mode !== 'home') ? 'graph' as const : (sb?.backgroundType ?? glassParams.backgroundType)
           const effectiveBgImage = sb?.bgImage ?? glassParams.bgImage
           const hasAnimatedBg = effectiveBgType !== 'image'
           return (
@@ -1491,7 +1495,7 @@ export function DashboardClient({
                   onMouseLeave={() => { studioMouseRef.current = { x: -1000, y: -1000 } }}
                   style={{
                     position: 'absolute', inset: 0, overflow: 'auto',
-                    transform: mode === 'studio' ? 'translateY(0)' : 'translateY(-100%)',
+                    transform: mode === 'studio' ? 'translateY(0) scale(1)' : mode === 'builder' ? 'translateY(0) scale(0.95)' : 'translateY(-100%) scale(1)',
                     opacity: mode === 'studio' ? 1 : 0,
                     transition: 'transform 600ms cubic-bezier(0.4, 0, 0.2, 1), opacity 400ms cubic-bezier(0.4, 0, 0.2, 1)',
                     pointerEvents: mode === 'studio' ? 'auto' : 'none',
@@ -1533,20 +1537,27 @@ export function DashboardClient({
                   </div>
                 </div>
 
-                {/* Builder mode — full AI app builder, slides in from top.
-                    paddingTop clears the stack chrome header, matching the studio list. */}
+                {/* Builder mode — full AI app builder, expands outward from center.
+                    Uses flex column with a spacer to push content below the stack chrome header. */}
                 <div
                   style={{
                     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
                     overflow: 'hidden',
-                    paddingTop: CHROME_HEADER_HEIGHT_PX,
-                    transform: mode === 'builder' ? 'translateY(0)' : 'translateY(-100%)',
+                    display: 'flex', flexDirection: 'column',
+                    transform: mode === 'builder' ? 'scale(1)' : 'scale(0.85)',
                     opacity: mode === 'builder' ? 1 : 0,
-                    transition: 'transform 600ms cubic-bezier(0.4, 0, 0.2, 1), opacity 400ms cubic-bezier(0.4, 0, 0.2, 1)',
+                    borderRadius: mode === 'builder' ? 0 : 24,
+                    transition: 'transform 500ms cubic-bezier(0.22, 1, 0.36, 1), opacity 350ms cubic-bezier(0.22, 1, 0.36, 1), border-radius 500ms cubic-bezier(0.22, 1, 0.36, 1)',
+                    transformOrigin: 'center center',
                     pointerEvents: mode === 'builder' ? 'auto' : 'none',
                   }}
                 >
-                  {mode === 'builder' && <StudioClient onBack={() => setMode("studio")} />}
+                  {/* Spacer to clear the stack chrome header */}
+                  <div style={{ flexShrink: 0, height: CHROME_HEADER_HEIGHT_PX }} />
+                  {/* StudioClient fills remaining space */}
+                  <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+                    {mode === 'builder' && <StudioClient onBack={() => setMode("studio")} />}
+                  </div>
                 </div>
               </div>
             )}
@@ -1733,7 +1744,15 @@ export function DashboardClient({
       {labOpen && (
         <GlassLabPanel
           params={glassParams}
-          onChange={setGlassParams}
+          onChange={(newParams) => {
+            // In studio/builder mode, save bg type changes to the ref but keep "graph" active
+            if (mode !== 'home' && newParams.backgroundType !== 'graph') {
+              userBgTypeRef.current = newParams.backgroundType
+              setGlassParams({ ...newParams, backgroundType: 'graph' })
+            } else {
+              setGlassParams(newParams)
+            }
+          }}
           onClose={() => setLabOpen(false)}
           profiles={order.map(id => {
             const p = profiles.find(x => x.id === id)
