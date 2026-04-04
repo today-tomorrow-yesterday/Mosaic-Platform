@@ -17,6 +17,7 @@ The `.claude/rules/` directory is auto-loaded every session:
 - `convex.md` — ConvexTranslator usage, repository pattern, schema conventions
 - `nextjs.md` — Server/Client component boundaries, auth patterns, env vars
 - `ui-components.md` — shared components, Tailwind conventions, color system
+- `animations.md` — transition philosophy, easing curves, timing scale, hover patterns, panel expand, shimmer
 - `typescript.md` — type strictness, no `any`, discriminated unions
 - `git-workflow.md` — conventional commits, atomic commits, no force-push
 - `security.md` — Clerk auth, secret handling, env var safety

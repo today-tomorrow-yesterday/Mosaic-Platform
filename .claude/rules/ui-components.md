@@ -37,9 +37,11 @@
 - Do not redefine these per-app — they are intentionally consistent
 
 ## Typography
-- Font: Inter (loaded via `next/font/google` in each app's `layout.tsx`)
-- Applied via `className={inter.className}` on the `<html>` element
+- **Platform app**: `Fraunces` (display, `--font-display`) + `DM_Sans` (body, `--font-body`) — loaded in `apps/platform/src/app/layout.tsx`
+- **Other apps**: `Inter` — loaded via `next/font/google` in each app's `layout.tsx`
+- Applied via font variable classNames on the `<html>` element
 - **DO NOT** load fonts in individual components — always via layout
+- **DO NOT** add animation or transition styles to `ui-components.md` rules — see `animations.md`
 
 ## AppHeader
 - Every app page should start with `<AppHeader name="App Name" actions={<UserButton />} backHref={...} />`
