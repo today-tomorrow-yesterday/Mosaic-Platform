@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useMemo, useState, useRef, useEffect, useCallback } from "react"
-import { X, FlaskConical, ImageIcon, Play, Pause } from "lucide-react"
+import { X, Layers, Image as ImageIcon, Sparkles, Battery } from "lucide-react"
 
 // ── Engine types ─────────────────────────────────────────────────────────────
 
@@ -17,16 +17,67 @@ export type EngineType = (typeof ENGINE)[keyof typeof ENGINE]
 
 export type BgSelection = { url: string; position: string } | null
 
+export type BackgroundType = "image" | "fluid" | "abstract" | "particles" | "lasers" | "waves" | "tunnel" | "pattern" | "rain" | "forest"
+
 export type GlassParams = {
   engine: EngineType
   blur: number
   refraction: number
   opacity: number
   tint: "light" | "dark"
-  bgImage: BgSelection                    // background image behind bento cards
-  stackBgImages: Record<string, BgSelection>  // per-profile background images for the stack
-  bgMotion: boolean                       // slow drift animation on background images
-  bgMotionSpeed: number                   // drift animation duration in seconds (lower = faster)
+  bgImage: BgSelection
+  stackBackgrounds: Record<string, { backgroundType: BackgroundType; bgImage: BgSelection }>
+  bgMotion: boolean
+  bgMotionSpeed: number
+  backgroundType: BackgroundType
+  ecoMode: boolean
+  // Fluid
+  fluidSpeed: number
+  fluidZoom: number
+  fluidComplexity: number
+  fluidMorphSpeed: number
+  fluidMorphIntensity: number
+  fluidTheme: string
+  // Abstract
+  abstractSpeed: number
+  abstractTheme: string
+  // Rain
+  rainOpacity: number
+  rainBgColor: string
+  // Waves
+  waveSpeed: number
+  waveHeight: number
+  waveFreqX: number
+  waveFreqZ: number
+  waveChaos: number
+  // Lasers
+  laserSpeed: number
+  laserColorSpeed: number
+  // Forest
+  forestSpeed: number
+  forestFogDensity: number
+  forestCamHeight: number
+  forestSway: number
+  forestFogColor: string
+  forestLightInt: number
+  // Particles
+  particleBgColor: string
+  particleCount: number
+  particleMinWind: number
+  particleMaxWind: number
+  particleGravity: number
+  particleTurbulence: number
+  // Tunnel
+  tunnelSpeed: number
+  tunnelBgColor: string
+  tunnelFogDensity: number
+  // Pattern
+  patternSpeed: number
+  // Card animations & physics
+  ambientFloat: boolean
+  floatSpeed: number
+  tilt3d: boolean
+  magnetic: boolean
 }
 
 export const DEFAULT_GLASS: GlassParams = {
@@ -36,13 +87,51 @@ export const DEFAULT_GLASS: GlassParams = {
   opacity: 0.08,
   tint: "dark",
   bgImage: null,
-  stackBgImages: {},
+  stackBackgrounds: {},
   bgMotion: false,
   bgMotionSpeed: 12,
+  backgroundType: "image",
+  ecoMode: false,
+  fluidSpeed: 0.6,
+  fluidZoom: 0.9193,
+  fluidComplexity: 0.7007,
+  fluidMorphSpeed: 0.834,
+  fluidMorphIntensity: 0.7005,
+  fluidTheme: "Original Holographic",
+  abstractSpeed: 0.72,
+  abstractTheme: "blue",
+  rainOpacity: 0.9,
+  rainBgColor: "#000000",
+  waveSpeed: 0.0033,
+  waveHeight: 0.60,
+  waveFreqX: 0.27,
+  waveFreqZ: 0.52,
+  waveChaos: 2.30,
+  laserSpeed: 1.0,
+  laserColorSpeed: 0.2,
+  forestSpeed: 0.15,
+  forestFogDensity: 0.03,
+  forestCamHeight: 25,
+  forestSway: 0.0,
+  forestFogColor: "#b7cdd7",
+  forestLightInt: 0.0,
+  particleBgColor: "#000000",
+  particleCount: 100,
+  particleMinWind: 1.5,
+  particleMaxWind: 18,
+  particleGravity: 0.6,
+  particleTurbulence: 0.8,
+  tunnelSpeed: 6.0,
+  tunnelBgColor: "#b6c2cc",
+  tunnelFogDensity: 0.0104,
+  patternSpeed: 0.03,
+  ambientFloat: false,
+  floatSpeed: 6,
+  tilt3d: false,
+  magnetic: false,
 }
 
 // ── Background image registry ────────────────────────────────────────────────
-// Add new entries here to make them available in the Lab panel.
 
 export type BgEntry = { label: string; url: string; position?: string }
 
@@ -57,12 +146,12 @@ export const BG_IMAGES: BgEntry[] = [
 // ── Presets ───────────────────────────────────────────────────────────────────
 
 const PRESETS: { label: string; engine: EngineType; params: Partial<GlassParams> }[] = [
-  { label: "Off",          engine: ENGINE.OFF,       params: { blur: 0, refraction: 0, opacity: 0 } },
-  { label: "Frost",        engine: ENGINE.LINEAR,    params: { blur: 20, refraction: 0.01, opacity: 0.15 } },
-  { label: "Linear",       engine: ENGINE.LINEAR,    params: { blur: 6, refraction: 0.10, opacity: 0.08 } },
-  { label: "Radial Lens",  engine: ENGINE.RADIAL,    params: { blur: 8, refraction: 0.08, opacity: 0.10 } },
-  { label: "Crystal",      engine: ENGINE.CRYSTAL,   params: { blur: 2, refraction: 0.60, opacity: 0.06 } },
-  { label: "Bit-Packed",   engine: ENGINE.BITPACKED, params: { blur: 4, refraction: 0.20, opacity: 0.05 } },
+  { label: "Off",         engine: ENGINE.OFF,       params: { blur: 0,  refraction: 0,    opacity: 0    } },
+  { label: "Frost",       engine: ENGINE.LINEAR,    params: { blur: 20, refraction: 0.01, opacity: 0.15 } },
+  { label: "Linear",      engine: ENGINE.LINEAR,    params: { blur: 6,  refraction: 0.10, opacity: 0.08 } },
+  { label: "Radial",      engine: ENGINE.RADIAL,    params: { blur: 8,  refraction: 0.08, opacity: 0.10 } },
+  { label: "Crystal",     engine: ENGINE.CRYSTAL,   params: { blur: 2,  refraction: 0.60, opacity: 0.06 } },
+  { label: "Bit-Packed",  engine: ENGINE.BITPACKED, params: { blur: 4,  refraction: 0.20, opacity: 0.05 } },
 ]
 
 // ── SVG map generators ───────────────────────────────────────────────────────
@@ -108,7 +197,6 @@ export function GlassFilterSvg({
             <feDisplacementMap in="SourceGraphic" scale={params.refraction} xChannelSelector="R" yChannelSelector="B" />
           </filter>
         )}
-
         {params.engine === ENGINE.RADIAL && (
           <filter id={`glass-${cardId}`} x="-50%" y="-50%" width="200%" height="200%">
             <feImage
@@ -118,7 +206,6 @@ export function GlassFilterSvg({
             <feDisplacementMap in="SourceGraphic" in2="normalMap" scale={params.refraction * 400} xChannelSelector="R" yChannelSelector="G" />
           </filter>
         )}
-
         {params.engine === ENGINE.CRYSTAL && (
           <filter id={`glass-${cardId}`} x="-50%" y="-50%" width="200%" height="200%" primitiveUnits="objectBoundingBox">
             <feImage href="https://essykings.github.io/JavaScript/map.png" x="0" y="0" width="1" height="1" preserveAspectRatio="none" result="map" />
@@ -126,7 +213,6 @@ export function GlassFilterSvg({
             <feDisplacementMap in="blur" in2="map" scale={params.refraction} xChannelSelector="R" yChannelSelector="G" />
           </filter>
         )}
-
         {params.engine === ENGINE.BITPACKED && (
           <filter id={`glass-${cardId}`} x="-20%" y="-20%" width="140%" height="140%" colorInterpolationFilters="sRGB">
             <feComponentTransfer result="SourceBackground" in="SourceGraphic">
@@ -175,31 +261,203 @@ interface GlassLabPanelProps {
   params: GlassParams
   onChange: (params: GlassParams) => void
   onClose: () => void
-  profiles: StackProfile[]    // profile list for per-stack background pickers
+  profiles: StackProfile[]       // ordered front-to-back; profiles[0] = currently active stack
 }
 
-// ── Slider sub-component ─────────────────────────────────────────────────────
+// ── Design tokens ─────────────────────────────────────────────────────────────
 
-function Slider({
-  label, value, display, min, max, step, onChange,
-}: {
+const D = {
+  bg:      "rgba(9, 9, 19, 0.96)",
+  border:  "rgba(255,255,255,0.08)",
+  text1:   "rgba(255,255,255,0.88)",
+  text2:   "rgba(255,255,255,0.40)",
+  text3:   "rgba(255,255,255,0.22)",
+  accent:  "#60a5fa",
+  accent2: "#93c5fd",
+  rowHover: "rgba(255,255,255,0.05)",
+  rowActive: "rgba(255,255,255,0.08)",
+  pill:    "rgba(255,255,255,0.07)",
+  pillBorder: "rgba(255,255,255,0.1)",
+  divider: "rgba(255,255,255,0.07)",
+}
+
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function LabSlider({ label, value, display, min, max, step, onChange }: {
   label: string; value: number; display: string; min: number; max: number; step: number; onChange: (v: number) => void
 }): React.ReactElement {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 7, minWidth: 0 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 1px" }}>
-        <span style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.14em", fontWeight: 700, color: "rgba(255,255,255,0.32)" }}>{label}</span>
-        <span
-          key={String(Math.round(value * 100))}
-          className="glass-value-display"
-          style={{ fontSize: 11, fontWeight: 500, color: "#93c5fd", fontVariantNumeric: "tabular-nums" }}
-        >{display}</span>
+    <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+        <span style={{ fontSize: 9, fontWeight: 700, color: D.text2, letterSpacing: "0.1em", textTransform: "uppercase" }}>{label}</span>
+        <span style={{ fontSize: 11, fontWeight: 500, color: D.accent2, fontVariantNumeric: "tabular-nums" }}>{display}</span>
       </div>
-      <input
-        type="range" min={min} max={max} step={step} value={value}
-        onChange={(e) => onChange(parseFloat(e.target.value))}
-        className="glass-slider"
-      />
+      <input type="range" min={min} max={max} step={step} value={value}
+        onChange={e => onChange(parseFloat(e.target.value))}
+        style={{ width: "100%", accentColor: D.accent, cursor: "pointer", height: 3 }} />
+    </div>
+  )
+}
+
+function DarkToggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }): React.ReactElement {
+  return (
+    <div onClick={() => onChange(!checked)}
+      style={{ width: 34, height: 18, borderRadius: 9, padding: 2, flexShrink: 0, cursor: "pointer",
+        background: checked ? D.accent : "rgba(255,255,255,0.15)", transition: "background 0.2s ease" }}>
+      <div style={{ width: 14, height: 14, borderRadius: "50%", background: "white",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.4)", transition: "transform 0.2s ease",
+        transform: checked ? "translateX(16px)" : "translateX(0)" }} />
+    </div>
+  )
+}
+
+function ToggleRow({ label, sub, checked, onChange }: {
+  label: string; sub?: string; checked: boolean; onChange: (v: boolean) => void
+}): React.ReactElement {
+  return (
+    <div onClick={() => onChange(!checked)}
+      style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "9px 12px", borderRadius: 10, cursor: "pointer",
+        background: checked ? D.rowActive : "transparent",
+        border: `1px solid ${checked ? "rgba(255,255,255,0.1)" : "transparent"}`,
+        transition: "all 0.15s ease" }}>
+      <div>
+        <div style={{ fontSize: 13, fontWeight: 500, color: D.text1, lineHeight: 1.2 }}>{label}</div>
+        {sub && <div style={{ fontSize: 10, color: D.text2, marginTop: 2 }}>{sub}</div>}
+      </div>
+      <DarkToggle checked={checked} onChange={onChange} />
+    </div>
+  )
+}
+
+function SegControl({ options, value, onChange }: {
+  options: string[]; value: string; onChange: (v: string) => void
+}): React.ReactElement {
+  return (
+    <div style={{ display: "flex", background: "rgba(255,255,255,0.06)", borderRadius: 8, padding: 2, gap: 2 }}>
+      {options.map(opt => (
+        <button key={opt} onClick={() => onChange(opt)}
+          style={{ flex: 1, padding: "4px 0", borderRadius: 6, border: "none", cursor: "pointer",
+            fontSize: 11, fontWeight: 600,
+            background: value === opt ? "rgba(255,255,255,0.12)" : "transparent",
+            color: value === opt ? D.text1 : D.text2,
+            boxShadow: value === opt ? "0 1px 3px rgba(0,0,0,0.3)" : "none",
+            transition: "all 0.15s ease" }}>
+          {opt}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function SecLabel({ children }: { children: React.ReactNode }): React.ReactElement {
+  return (
+    <div style={{ fontSize: 9, fontWeight: 700, color: D.text3, letterSpacing: "0.14em",
+      textTransform: "uppercase", marginBottom: 8 }}>
+      {children}
+    </div>
+  )
+}
+
+const BG_TYPE_DOTS: Record<BackgroundType, string> = {
+  image: "#a1a1aa", fluid: "#818cf8", abstract: "#34d399", particles: "#fbbf24",
+  lasers: "#f87171", waves: "#38bdf8", tunnel: "#a78bfa", pattern: "#fb923c",
+  rain: "#60a5fa", forest: "#4ade80",
+}
+
+const BG_TYPE_LABELS: Record<BackgroundType, string> = {
+  image: "Image", fluid: "Fluid", abstract: "Abstract", particles: "Particles",
+  lasers: "Lasers", waves: "Waves", tunnel: "Tunnel", pattern: "Pattern",
+  rain: "Rain", forest: "Forest",
+}
+
+function BgTypeControls({ params, onChange }: { params: GlassParams; onChange: (p: GlassParams) => void }): React.ReactElement {
+  const upd = <K extends keyof GlassParams>(k: K, v: GlassParams[K]): void => onChange({ ...params, [k]: v })
+  const t = params.backgroundType
+
+  if (t === "image") return (
+    <p style={{ color: D.text2, fontSize: 12, margin: 0, paddingTop: 4, lineHeight: 1.5 }}>
+      Choose a card background image in the Card Look tab.
+    </p>
+  )
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+      {t === "fluid" && <>
+        <LabSlider label="Speed"      value={params.fluidSpeed}         display={params.fluidSpeed.toFixed(1)}         min={0}   max={2}   step={0.1}  onChange={v => upd("fluidSpeed", v)} />
+        <LabSlider label="Zoom"       value={params.fluidZoom}          display={params.fluidZoom.toFixed(2)}          min={0.1} max={3}   step={0.01} onChange={v => upd("fluidZoom", v)} />
+        <LabSlider label="Complexity" value={params.fluidComplexity}    display={params.fluidComplexity.toFixed(2)}    min={0.1} max={2}   step={0.01} onChange={v => upd("fluidComplexity", v)} />
+        <LabSlider label="Morph Spd"  value={params.fluidMorphSpeed}    display={params.fluidMorphSpeed.toFixed(2)}    min={0}   max={2}   step={0.01} onChange={v => upd("fluidMorphSpeed", v)} />
+        <LabSlider label="Morph Int"  value={params.fluidMorphIntensity} display={params.fluidMorphIntensity.toFixed(2)} min={0}  max={2}   step={0.01} onChange={v => upd("fluidMorphIntensity", v)} />
+      </>}
+      {t === "abstract" && <>
+        <LabSlider label="Speed" value={params.abstractSpeed} display={params.abstractSpeed.toFixed(2)} min={0} max={2} step={0.01} onChange={v => upd("abstractSpeed", v)} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+          <span style={{ fontSize: 9, fontWeight: 700, color: D.text2, letterSpacing: "0.1em", textTransform: "uppercase" }}>Theme</span>
+          <div style={{ display: "flex", gap: 4 }}>
+            {["blue","purple","orange","green","crimson"].map(th => (
+              <button key={th} onClick={() => onChange({ ...params, abstractTheme: th })}
+                style={{ flex: 1, height: 22, borderRadius: 5, border: `2px solid ${params.abstractTheme === th ? D.accent : "transparent"}`, cursor: "pointer",
+                  background: th==="blue"?"#3b82f6":th==="purple"?"#a855f7":th==="orange"?"#f97316":th==="green"?"#22c55e":"#ef4444" }} />
+            ))}
+          </div>
+        </div>
+      </>}
+      {t === "rain" && <>
+        <LabSlider label="Opacity" value={params.rainOpacity} display={params.rainOpacity.toFixed(2)} min={0} max={1} step={0.01} onChange={v => upd("rainOpacity", v)} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+          <span style={{ fontSize: 9, fontWeight: 700, color: D.text2, letterSpacing: "0.1em", textTransform: "uppercase" }}>BG Color</span>
+          <input type="color" value={params.rainBgColor} onChange={e => onChange({ ...params, rainBgColor: e.target.value })}
+            style={{ width: "100%", height: 28, borderRadius: 6, cursor: "pointer", border: `1px solid ${D.border}`, background: "transparent" }} />
+        </div>
+      </>}
+      {t === "waves" && <>
+        <LabSlider label="Speed"     value={params.waveSpeed}  display={params.waveSpeed.toFixed(4)}  min={0}    max={0.05} step={0.0001} onChange={v => upd("waveSpeed", v)} />
+        <LabSlider label="Amplitude" value={params.waveHeight} display={params.waveHeight.toFixed(2)} min={0.1}  max={5}    step={0.01}   onChange={v => upd("waveHeight", v)} />
+        <LabSlider label="Freq X"    value={params.waveFreqX}  display={params.waveFreqX.toFixed(2)}  min={0.01} max={1}    step={0.01}   onChange={v => upd("waveFreqX", v)} />
+        <LabSlider label="Freq Z"    value={params.waveFreqZ}  display={params.waveFreqZ.toFixed(2)}  min={0.01} max={1}    step={0.01}   onChange={v => upd("waveFreqZ", v)} />
+        <LabSlider label="Chaos"     value={params.waveChaos}  display={params.waveChaos.toFixed(2)}  min={0}    max={5}    step={0.01}   onChange={v => upd("waveChaos", v)} />
+      </>}
+      {t === "lasers" && <>
+        <LabSlider label="Speed"       value={params.laserSpeed}      display={params.laserSpeed.toFixed(1)}      min={0} max={3} step={0.1}  onChange={v => upd("laserSpeed", v)} />
+        <LabSlider label="Color Speed" value={params.laserColorSpeed} display={params.laserColorSpeed.toFixed(1)} min={0} max={1} step={0.01} onChange={v => upd("laserColorSpeed", v)} />
+      </>}
+      {t === "particles" && <>
+        <LabSlider label="Count"       value={params.particleCount}       display={String(params.particleCount)}           min={10} max={300} step={1}   onChange={v => upd("particleCount", v)} />
+        <LabSlider label="Min Wind"    value={params.particleMinWind}     display={params.particleMinWind.toFixed(1)}      min={0}  max={10}  step={0.1}  onChange={v => upd("particleMinWind", v)} />
+        <LabSlider label="Max Wind"    value={params.particleMaxWind}     display={params.particleMaxWind.toFixed(1)}      min={1}  max={30}  step={0.1}  onChange={v => upd("particleMaxWind", v)} />
+        <LabSlider label="Gravity"     value={params.particleGravity}     display={params.particleGravity.toFixed(1)}      min={0}  max={3}   step={0.1}  onChange={v => upd("particleGravity", v)} />
+        <LabSlider label="Turbulence"  value={params.particleTurbulence}  display={params.particleTurbulence.toFixed(1)}   min={0}  max={3}   step={0.1}  onChange={v => upd("particleTurbulence", v)} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+          <span style={{ fontSize: 9, fontWeight: 700, color: D.text2, letterSpacing: "0.1em", textTransform: "uppercase" }}>BG Color</span>
+          <input type="color" value={params.particleBgColor} onChange={e => onChange({ ...params, particleBgColor: e.target.value })}
+            style={{ width: "100%", height: 28, borderRadius: 6, cursor: "pointer", border: `1px solid ${D.border}`, background: "transparent" }} />
+        </div>
+      </>}
+      {t === "forest" && <>
+        <LabSlider label="Speed"       value={params.forestSpeed}      display={params.forestSpeed.toFixed(2)}      min={0}     max={0.6}  step={0.01}  onChange={v => upd("forestSpeed", v)} />
+        <LabSlider label="Altitude"    value={params.forestCamHeight}  display={params.forestCamHeight.toFixed(1)}  min={5}     max={50}   step={0.5}   onChange={v => upd("forestCamHeight", v)} />
+        <LabSlider label="Wind"        value={params.forestSway}       display={params.forestSway.toFixed(1)}       min={0}     max={5}    step={0.1}   onChange={v => upd("forestSway", v)} />
+        <LabSlider label="Light"       value={params.forestLightInt}   display={params.forestLightInt.toFixed(2)}   min={0}     max={3}    step={0.01}  onChange={v => upd("forestLightInt", v)} />
+        <LabSlider label="Fog Density" value={params.forestFogDensity} display={params.forestFogDensity.toFixed(3)} min={0.001} max={0.05} step={0.001} onChange={v => upd("forestFogDensity", v)} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+          <span style={{ fontSize: 9, fontWeight: 700, color: D.text2, letterSpacing: "0.1em", textTransform: "uppercase" }}>Fog Color</span>
+          <input type="color" value={params.forestFogColor} onChange={e => onChange({ ...params, forestFogColor: e.target.value })}
+            style={{ width: "100%", height: 28, borderRadius: 6, cursor: "pointer", border: `1px solid ${D.border}`, background: "transparent" }} />
+        </div>
+      </>}
+      {t === "tunnel" && <>
+        <LabSlider label="Speed"       value={params.tunnelSpeed}      display={params.tunnelSpeed.toFixed(1)}       min={0} max={50}  step={0.1}    onChange={v => upd("tunnelSpeed", v)} />
+        <LabSlider label="Fog Density" value={params.tunnelFogDensity} display={params.tunnelFogDensity.toFixed(4)} min={0} max={0.1} step={0.0001} onChange={v => upd("tunnelFogDensity", v)} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+          <span style={{ fontSize: 9, fontWeight: 700, color: D.text2, letterSpacing: "0.1em", textTransform: "uppercase" }}>BG Color</span>
+          <input type="color" value={params.tunnelBgColor} onChange={e => onChange({ ...params, tunnelBgColor: e.target.value })}
+            style={{ width: "100%", height: 28, borderRadius: 6, cursor: "pointer", border: `1px solid ${D.border}`, background: "transparent" }} />
+        </div>
+      </>}
+      {t === "pattern" && <>
+        <LabSlider label="Speed" value={params.patternSpeed} display={params.patternSpeed.toFixed(3)} min={0} max={0.2} step={0.001} onChange={v => upd("patternSpeed", v)} />
+      </>}
     </div>
   )
 }
@@ -208,237 +466,362 @@ function Slider({
 
 export function GlassLabPanel({ params, onChange, onClose, profiles }: GlassLabPanelProps): React.ReactElement {
   const [closing, setClosing] = useState(false)
-  const [lastPreset, setLastPreset] = useState("Linear")
+  const [tab, setTab] = useState<"look" | "bg" | "motion">("look")
+  const [selIdx, setSelIdx] = useState(0)           // which stack is being edited in Background tab
+  const [userImages, setUserImages] = useState<BgEntry[]>([])
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const uploadRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => () => {
-    if (closeTimer.current) clearTimeout(closeTimer.current)
-  }, [])
+  useEffect(() => () => { if (closeTimer.current) clearTimeout(closeTimer.current) }, [])
+  // Keep selIdx in bounds if profiles change
+  useEffect(() => { setSelIdx(i => Math.min(i, Math.max(0, profiles.length - 1))) }, [profiles.length])
 
   const handleClose = useCallback(() => {
     setClosing(true)
     closeTimer.current = setTimeout(onClose, 200)
   }, [onClose])
 
-  const update = <K extends keyof GlassParams>(key: K, value: GlassParams[K]): void => {
-    onChange({ ...params, [key]: value })
+  const upd = <K extends keyof GlassParams>(k: K, v: GlassParams[K]): void => onChange({ ...params, [k]: v })
+  const anyMotion = params.ambientFloat || params.tilt3d || params.magnetic
+
+  // ── Per-stack background helpers ─────────────────────────────────────────────
+  const selectedProfile = profiles[selIdx] ?? profiles[0]
+
+  const getStackBg = (profileId: string) =>
+    params.stackBackgrounds[profileId] ?? { backgroundType: params.backgroundType, bgImage: params.bgImage }
+
+  const setStackBg = (profileId: string, patch: Partial<{ backgroundType: BackgroundType; bgImage: BgSelection }>) => {
+    const existing = getStackBg(profileId)
+    onChange({
+      ...params,
+      stackBackgrounds: {
+        ...params.stackBackgrounds,
+        [profileId]: { ...existing, ...patch },
+      },
+    })
   }
 
-  const activePresetLabel = lastPreset
+  // ── Image upload handler ──────────────────────────────────────────────────────
+  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const url = URL.createObjectURL(file)
+    setUserImages(prev => [...prev, { label: file.name.replace(/\.[^.]+$/, ""), url }])
+    e.target.value = ""
+  }
 
-  const renderImagePicker = (
-    field: string,
-    current: BgSelection,
-    onSelect: (v: BgSelection) => void,
-    noneLabel = "None",
-  ): React.ReactElement => (
-    <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
-      <button
-        onClick={() => onSelect(null)}
-        className="transition-all duration-150 hover:scale-105 active:scale-95"
-        style={{
-          width: 60, height: 42, borderRadius: 10, border: "2px solid",
-          borderColor: current === null ? "#60a5fa" : "rgba(255,255,255,0.1)",
-          background: field === "stackBgImages" ? "linear-gradient(135deg, #0d1f15, #1b422a, #070d09)" : "rgba(255,255,255,0.05)",
-          boxShadow: current === null ? "inset 0 0 0 2px #60a5fa, 0 0 0 3px rgba(96,165,250,0.2)" : "none",
-          cursor: "pointer",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          color: current === null ? "#93c5fd" : "rgba(255,255,255,0.35)", fontSize: 9, fontWeight: 600,
-        }}
-      >
+  // ── Image picker (built-in + user-uploaded) ──────────────────────────────────
+  const allImages = [...BG_IMAGES, ...userImages]
+
+  const renderImgPicker = (current: BgSelection, onSelect: (v: BgSelection) => void, noneLabel = "None"): React.ReactElement => (
+    <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+      <button onClick={() => onSelect(null)}
+        style={{ width: 44, height: 34, borderRadius: 7, border: `2px solid ${current === null ? D.accent : D.pillBorder}`,
+          background: D.pill, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 9, fontWeight: 600, color: current === null ? D.accent2 : D.text2 }}>
         {noneLabel}
       </button>
-      {BG_IMAGES.map((bg) => {
+      {allImages.map(bg => {
         const pos = bg.position ?? "center"
-        const isActive = current !== null && current.url === bg.url && current.position === pos
+        const isOn = current !== null && current.url === bg.url
         return (
-          <button
-            key={`${bg.label}-${pos}`}
-            onClick={() => onSelect({ url: bg.url, position: pos })}
-            className="transition-all duration-150 hover:scale-105 active:scale-95"
-            style={{
-              width: 60, height: 42, borderRadius: 10, border: "2px solid",
-              borderColor: isActive ? "#60a5fa" : "rgba(255,255,255,0.1)",
-              boxShadow: isActive ? "inset 0 0 0 2px #60a5fa, 0 0 0 3px rgba(96,165,250,0.2)" : "none",
-              backgroundImage: `url(${bg.url})`,
-              backgroundSize: "cover",
-              backgroundPosition: pos,
+          <button key={`${bg.label}-${bg.url}`} onClick={() => onSelect({ url: bg.url, position: pos })}
+            style={{ width: 44, height: 34, borderRadius: 7, border: `2px solid ${isOn ? D.accent : D.pillBorder}`,
               cursor: "pointer", overflow: "hidden", padding: 0,
-              transition: "border-color 160ms ease-out, box-shadow 160ms ease-out, transform 150ms ease-out",
-            }}
-            title={bg.label}
-          />
+              backgroundImage: `url(${bg.url})`, backgroundSize: "cover", backgroundPosition: pos,
+              transition: "border-color 0.12s ease" }}
+            title={bg.label} />
         )
       })}
+      {/* Upload button */}
+      <button onClick={() => uploadRef.current?.click()}
+        style={{ width: 44, height: 34, borderRadius: 7, border: `2px dashed ${D.pillBorder}`, background: "transparent",
+          cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+          color: D.text2, fontSize: 18, fontWeight: 300, lineHeight: 1 }}
+        title="Upload image">
+        +
+      </button>
+      <input ref={uploadRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleUpload} />
     </div>
   )
 
+  const tabs = [
+    { id: "look"   as const, label: "Card Look",   icon: <Layers size={12} /> },
+    { id: "bg"     as const, label: "Background",  icon: <ImageIcon size={12} /> },
+    { id: "motion" as const, label: "Motion",      icon: <Sparkles size={12} /> },
+  ]
+
+  const PANEL_W = 360
+  const PANEL_H = 680
+  const HEADER_H = 42
+  const TABBAR_H = 38
+
   return (
-    <div style={{
-      position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)",
-      zIndex: 200, width: "100%", maxWidth: 880,
-    }}>
+    <>
+      <style>{`
+        @keyframes glabIn  { from { opacity:0; transform:translateY(-50%) translateX(20px); } to { opacity:1; transform:translateY(-50%) translateX(0); } }
+        @keyframes glabOut { from { opacity:1; transform:translateY(-50%) translateX(0); }   to { opacity:0; transform:translateY(-50%) translateX(20px); } }
+      `}</style>
+
+      {/* Click-away backdrop */}
+      <div onClick={handleClose} style={{ position: "fixed", inset: 0, zIndex: 199 }} />
+
       <div style={{
-        background: "rgba(10, 9, 20, 0.92)",
-        backdropFilter: "blur(24px)",
-        border: "1px solid rgba(255,255,255,0.09)",
-        borderRadius: 20,
-        padding: "18px 20px",
-        boxShadow: "0 32px 80px rgba(0,0,0,0.75), 0 0 0 0.5px rgba(255,255,255,0.06) inset",
-        animation: closing
-          ? "glass-lab-out 200ms cubic-bezier(0.4, 0, 1, 1) both"
-          : "glass-lab-in 240ms cubic-bezier(0.22, 1, 0.36, 1) both",
+        position: "fixed", right: 48, top: "50%",
+        zIndex: 200, width: PANEL_W,
+        animation: closing ? "glabOut 200ms ease both" : "glabIn 260ms cubic-bezier(0.22,1,0.36,1) both",
       }}>
-        {/* Drag handle */}
-        <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
-          <div style={{ width: 28, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.15)" }} />
-        </div>
-
-        {/* Header */}
         <div style={{
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          borderBottom: "1px solid rgba(255,255,255,0.06)", paddingBottom: 14, marginBottom: 14,
+          width: PANEL_W, height: PANEL_H,
+          background: D.bg, backdropFilter: "blur(28px)",
+          border: `1px solid ${D.border}`, borderRadius: 16,
+          boxShadow: "0 32px 80px rgba(0,0,0,0.75), inset 0 0 0 0.5px rgba(255,255,255,0.05)",
+          display: "flex", flexDirection: "column", overflow: "hidden",
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <FlaskConical size={13} color="#60a5fa" />
-            <span style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.18em", fontWeight: 700, color: "rgba(255,255,255,0.32)" }}>Glass Lab</span>
-            <span style={{
-              fontSize: 11, fontWeight: 600, padding: "2px 10px", borderRadius: 9999,
-              background: "rgba(96,165,250,0.12)", color: "#93c5fd",
-            }}>
-              {activePresetLabel}
-            </span>
-          </div>
-          <button
-            onClick={handleClose}
-            className="transition-all duration-120 hover:bg-white/[0.12] active:scale-92"
-            style={{
-              width: 28, height: 28, borderRadius: 10, border: "1px solid rgba(255,255,255,0.08)",
-              background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)", cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}
-          >
-            <X size={12} />
-          </button>
-        </div>
 
-        {/* Engine presets */}
-        <div className="glass-preset-rail" style={{ display: "flex", gap: 6, marginBottom: 14, overflowX: "auto", whiteSpace: "nowrap" }}>
-          {PRESETS.map((preset) => {
-            const isActive = preset.engine === params.engine
-              && preset.params.blur === params.blur
-              && preset.params.refraction === params.refraction
-            return (
-              <button
-                key={preset.label}
-                onClick={() => { setLastPreset(preset.label); onChange({ ...params, engine: preset.engine, ...preset.params }) }}
-                className="transition-all duration-120 hover:border-blue-400/30 hover:text-white/70 active:scale-[0.97]"
-                style={{
-                  padding: "5px 13px", borderRadius: 9999, border: "1px solid", flexShrink: 0,
-                  borderColor: isActive ? "rgba(96,165,250,0.4)" : "rgba(255,255,255,0.09)",
-                  background: isActive ? "rgba(96,165,250,0.13)" : "rgba(255,255,255,0.04)",
-                  color: isActive ? "#93c5fd" : "rgba(255,255,255,0.42)",
-                  fontSize: 12, fontWeight: 500, cursor: "pointer",
-                }}
-              >
-                {preset.label}
-              </button>
-            )
-          })}
-        </div>
-
-        {/* Separator */}
-        <div style={{ height: 1, background: "rgba(255,255,255,0.07)", margin: "0 0 14px" }} />
-
-        {/* Parameter sliders */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 18, marginBottom: 14 }}>
-          <Slider label="Blur" value={params.blur} display={`${params.blur}px`} min={0} max={40} step={1} onChange={(v) => update("blur", v)} />
-          <Slider
-            label="Refraction" value={params.refraction} display={params.refraction.toFixed(2)}
-            min={0} max={params.engine === ENGINE.CRYSTAL ? 2 : 0.5} step={0.01}
-            onChange={(v) => update("refraction", v)}
-          />
-          <Slider label="Tint" value={params.opacity} display={`${Math.round(params.opacity * 100)}%`} min={0} max={0.4} step={0.01} onChange={(v) => update("opacity", v)} />
-        </div>
-
-        {/* Separator */}
-        <div style={{ height: 1, background: "rgba(255,255,255,0.07)", margin: "0 0 14px" }} />
-
-        {/* Two-column background section */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1px 1fr", gap: 18 }}>
-
-          {/* Left: Card background */}
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 10 }}>
-              <ImageIcon size={11} color="#60a5fa" />
-              <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.12em", fontWeight: 600, color: "rgba(255,255,255,0.38)" }}>
-                Card Background
-              </span>
+          {/* Header */}
+          <div style={{ height: HEADER_H, flexShrink: 0, display: "flex", alignItems: "center",
+            justifyContent: "space-between", padding: "0 16px", borderBottom: `1px solid ${D.divider}` }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ width: 24, height: 3, borderRadius: 2, background: "rgba(255,255,255,0.12)" }} />
+              <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: D.text2 }}>Glass Lab</span>
             </div>
-            {renderImagePicker("bgImage", params.bgImage, (v) => update("bgImage", v))}
+            <button onClick={handleClose}
+              style={{ width: 26, height: 26, borderRadius: 8, border: `1px solid ${D.border}`,
+                background: D.pill, cursor: "pointer", display: "flex", alignItems: "center",
+                justifyContent: "center", color: D.text2 }}>
+              <X size={12} />
+            </button>
           </div>
 
-          {/* Vertical divider */}
-          <div style={{ background: "rgba(255,255,255,0.07)", alignSelf: "stretch" }} />
+          {/* Tab bar */}
+          <div style={{ height: TABBAR_H, flexShrink: 0, display: "flex", alignItems: "stretch",
+            padding: "0 8px", gap: 2, borderBottom: `1px solid ${D.divider}` }}>
+            {tabs.map(t => (
+              <button key={t.id} onClick={() => setTab(t.id)}
+                style={{ display: "flex", alignItems: "center", gap: 5, padding: "0 10px",
+                  border: "none", cursor: "pointer", fontSize: 11, fontWeight: 600,
+                  background: "transparent",
+                  color: tab === t.id ? D.text1 : D.text2,
+                  borderBottom: `2px solid ${tab === t.id ? D.accent : "transparent"}`,
+                  transition: "all 0.15s ease", marginBottom: -1 }}>
+                {t.icon} {t.label}
+              </button>
+            ))}
+          </div>
 
-          {/* Right: Stack backgrounds */}
-          <div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                <ImageIcon size={11} color="#60a5fa" />
-                <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.12em", fontWeight: 600, color: "rgba(255,255,255,0.38)" }}>
-                  Stacks
-                </span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <button
-                  onClick={() => update("bgMotion", !params.bgMotion)}
-                  className="transition-all duration-150 hover:brightness-125"
-                  style={{
-                    display: "flex", alignItems: "center", gap: 5, padding: "3px 9px", borderRadius: 9999,
-                    border: "1px solid",
-                    borderColor: params.bgMotion ? "rgba(52,211,153,0.35)" : "rgba(255,255,255,0.08)",
-                    background: params.bgMotion ? "rgba(52,211,153,0.10)" : "rgba(255,255,255,0.04)",
-                    color: params.bgMotion ? "#6ee7b7" : "rgba(255,255,255,0.4)",
-                    fontSize: 10, fontWeight: 600, cursor: "pointer", flexShrink: 0,
-                  }}
-                >
-                  {params.bgMotion ? <Pause size={9} /> : <Play size={9} />}
-                  Motion
-                </button>
-                <div style={{
-                  width: params.bgMotion ? 100 : 0,
-                  opacity: params.bgMotion ? 1 : 0,
-                  overflow: "hidden",
-                  transition: "width 0.2s ease, opacity 0.15s ease",
-                  minHeight: 32,
-                  display: "flex", alignItems: "center",
-                }}>
-                  <div style={{ width: 100, padding: "4px 0" }}>
-                    <Slider label="Speed" value={params.bgMotionSpeed} display={`${params.bgMotionSpeed}s`} min={3} max={30} step={1} onChange={(v) => update("bgMotionSpeed", v)} />
+          {/* Tab content */}
+          <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+
+            {/* ── Card Look ── */}
+            {tab === "look" && (
+              <div style={{ flex: 1, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 14, overflowY: "auto" }}>
+                <div>
+                  <SecLabel>Glass Preset</SecLabel>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 7 }}>
+                    {PRESETS.map(preset => {
+                      const isOn = preset.engine === params.engine
+                        && preset.params.blur === params.blur
+                        && preset.params.refraction === params.refraction
+                      const pOp = (preset.params.opacity ?? 0.08) * 3
+                      const pBlur = Math.min((preset.params.blur ?? 0) * 0.35, 5)
+                      return (
+                        <button key={preset.label}
+                          onClick={() => onChange({ ...params, engine: preset.engine, ...preset.params })}
+                          style={{ height: 52, borderRadius: 10, border: `1.5px solid ${isOn ? D.accent : D.pillBorder}`,
+                            cursor: "pointer", position: "relative", overflow: "hidden", padding: 0,
+                            background: "linear-gradient(135deg, #1e2a4a, #2d1b4e)",
+                            boxShadow: isOn ? `0 0 0 2px ${D.accent}30` : "none",
+                            transition: "all 0.15s ease", display: "flex", flexDirection: "column",
+                            alignItems: "center", justifyContent: "flex-end" }}>
+                          <div style={{ position: "absolute", inset: 0, borderRadius: 9,
+                            backdropFilter: pBlur > 0 ? `blur(${pBlur}px)` : "none",
+                            background: `rgba(255,255,255,${pOp})` }} />
+                          <span style={{ position: "relative", zIndex: 1, fontSize: 9, fontWeight: 700,
+                            color: isOn ? D.accent2 : D.text2, padding: "3px 0 4px", letterSpacing: "0.04em" }}>
+                            {preset.label}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                <div style={{ height: 1, background: D.divider }} />
+
+                <div>
+                  <SecLabel>Fine Tune</SecLabel>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                    <LabSlider label="Blur"       value={params.blur}       display={`${params.blur}px`}                     min={0} max={40}  step={1}    onChange={v => upd("blur", v)} />
+                    <LabSlider label="Refraction" value={params.refraction} display={params.refraction.toFixed(2)}           min={0} max={params.engine === ENGINE.CRYSTAL ? 2 : 0.5} step={0.01} onChange={v => upd("refraction", v)} />
+                    <LabSlider label="Opacity"    value={params.opacity}    display={`${Math.round(params.opacity * 100)}%`} min={0} max={0.4}  step={0.01} onChange={v => upd("opacity", v)} />
+                  </div>
+                </div>
+
+                <div style={{ height: 1, background: D.divider }} />
+
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <SecLabel>Tint</SecLabel>
+                  <div style={{ width: 140 }}>
+                    <SegControl options={["Light", "Dark"]} value={params.tint === "light" ? "Light" : "Dark"}
+                      onChange={v => upd("tint", v === "Light" ? "light" : "dark")} />
                   </div>
                 </div>
               </div>
-            </div>
-            {profiles.map((p) => (
-              <div key={p.id} style={{ marginBottom: 10 }}>
-                <span style={{
-                  fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.45)", marginBottom: 6, display: "block",
-                  letterSpacing: "0.05em", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                }}>
-                  {p.name}
-                </span>
-                {renderImagePicker(
-                  "stackBgImages",
-                  params.stackBgImages[p.id] ?? null,
-                  (v) => onChange({ ...params, stackBgImages: { ...params.stackBgImages, [p.id]: v } }),
-                  "Default",
-                )}
+            )}
+
+            {/* ── Background ── */}
+            {tab === "bg" && profiles.length > 0 && selectedProfile && (() => {
+              const pid = selectedProfile.id
+              const sb = getStackBg(pid)
+              const effectiveBgType = sb.backgroundType
+              const effectiveBgImage = sb.bgImage
+
+              return (
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+
+                  {/* Stack carousel */}
+                  <div style={{ flexShrink: 0, padding: "10px 16px 0", borderBottom: `1px solid ${D.divider}` }}>
+                    <SecLabel>Stack</SecLabel>
+                    <div style={{ display: "flex", gap: 5, paddingBottom: 10 }}>
+                      {profiles.map((p, i) => (
+                        <button key={p.id} onClick={() => setSelIdx(i)}
+                          style={{ flex: 1, padding: "6px 8px", borderRadius: 9, border: `1px solid ${i === selIdx ? D.accent : D.pillBorder}`,
+                            background: i === selIdx ? "rgba(96,165,250,0.14)" : D.pill,
+                            cursor: "pointer", fontSize: 11, fontWeight: 600,
+                            color: i === selIdx ? D.accent2 : D.text2,
+                            display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
+                            transition: "all 0.12s ease" }}>
+                          <span>{p.name}</span>
+                          {i === 0 && <span style={{ fontSize: 8, color: i === selIdx ? D.accent2 : D.text3, letterSpacing: "0.06em" }}>FRONT</span>}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Scrollable content for this stack */}
+                  <div style={{ flex: 1, overflowY: "auto", padding: "14px 16px", display: "flex", flexDirection: "column", gap: 14 }}>
+
+                    {/* Page Background type */}
+                    <div>
+                      <SecLabel>Page Background</SecLabel>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 5 }}>
+                        {(Object.keys(BG_TYPE_LABELS) as BackgroundType[]).map(type => {
+                          const isOn = effectiveBgType === type
+                          return (
+                            <button key={type} onClick={() => setStackBg(pid, { backgroundType: type })}
+                              style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+                                padding: "7px 4px", borderRadius: 9, border: `1px solid ${isOn ? D.accent : D.pillBorder}`,
+                                background: isOn ? "rgba(96,165,250,0.12)" : D.pill, cursor: "pointer",
+                                transition: "all 0.12s ease" }}>
+                              <div style={{ width: 8, height: 8, borderRadius: "50%", background: BG_TYPE_DOTS[type] }} />
+                              <span style={{ fontSize: 9, fontWeight: 600, color: isOn ? D.accent2 : D.text2 }}>
+                                {BG_TYPE_LABELS[type]}
+                              </span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Type-specific settings (global params, displayed for current type) */}
+                    {effectiveBgType !== "image" && (
+                      <>
+                        <div style={{ height: 1, background: D.divider }} />
+                        <div>
+                          <SecLabel>{BG_TYPE_LABELS[effectiveBgType]} Settings</SecLabel>
+                          <BgTypeControls params={{ ...params, backgroundType: effectiveBgType }} onChange={onChange} />
+                        </div>
+                      </>
+                    )}
+
+                    <div style={{ height: 1, background: D.divider }} />
+
+                    {/* Card background image */}
+                    <div>
+                      <SecLabel>Card Image</SecLabel>
+                      {renderImgPicker(effectiveBgImage, v => setStackBg(pid, { bgImage: v }))}
+                    </div>
+
+                    <div style={{ height: 1, background: D.divider }} />
+
+                    {/* BG motion (global) */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 500, color: D.text1 }}>Background Motion</div>
+                        <div style={{ fontSize: 10, color: D.text2, marginTop: 1 }}>Parallax scroll · global</div>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        {params.bgMotion && (
+                          <div style={{ width: 100 }}>
+                            <LabSlider label="Speed" value={params.bgMotionSpeed} display={`${params.bgMotionSpeed}s`} min={3} max={30} step={1} onChange={v => upd("bgMotionSpeed", v)} />
+                          </div>
+                        )}
+                        <DarkToggle checked={params.bgMotion} onChange={v => upd("bgMotion", v)} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            })()}
+
+            {/* ── Background: no profiles fallback ── */}
+            {tab === "bg" && profiles.length === 0 && (
+              <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <p style={{ color: D.text2, fontSize: 12, textAlign: "center" }}>No stacks available.</p>
               </div>
-            ))}
+            )}
+
+            {/* ── Motion ── */}
+            {tab === "motion" && (
+              <div style={{ flex: 1, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 4 }}>
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4,
+                  opacity: anyMotion ? 1 : 0.55, transition: "opacity 0.2s ease" }}>
+                  <div onClick={() => upd("ambientFloat", !params.ambientFloat)}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+                      padding: "9px 12px", borderRadius: 10, cursor: "pointer",
+                      background: params.ambientFloat ? D.rowActive : "transparent",
+                      border: `1px solid ${params.ambientFloat ? "rgba(255,255,255,0.1)" : "transparent"}`,
+                      transition: "all 0.15s ease" }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: D.text1, lineHeight: 1.2 }}>Ambient Float</div>
+                      <div style={{ fontSize: 10, color: D.text2, marginTop: 2 }}>Cards gently bob up and down</div>
+                    </div>
+                    <DarkToggle checked={params.ambientFloat} onChange={v => upd("ambientFloat", v)} />
+                  </div>
+                  {params.ambientFloat && (
+                    <div style={{ padding: "4px 12px 8px" }}>
+                      <SegControl options={["Slow","Medium","Fast"]}
+                        value={params.floatSpeed >= 9 ? "Slow" : params.floatSpeed >= 5 ? "Medium" : "Fast"}
+                        onChange={v => upd("floatSpeed", v === "Slow" ? 10 : v === "Medium" ? 6 : 3)} />
+                    </div>
+                  )}
+                  <ToggleRow label="3D Tilt"  sub="Cards tilt toward your cursor"  checked={params.tilt3d}  onChange={v => upd("tilt3d", v)} />
+                  <ToggleRow label="Magnetic" sub="Cards pull toward your cursor"   checked={params.magnetic} onChange={v => upd("magnetic", v)} />
+                </div>
+
+                <div style={{ height: 1, background: D.divider, margin: "4px 0" }} />
+
+                <div onClick={() => upd("ecoMode", !params.ecoMode)}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+                    padding: "9px 12px", borderRadius: 10, cursor: "pointer",
+                    background: params.ecoMode ? "rgba(16,185,129,0.1)" : "transparent",
+                    border: `1px solid ${params.ecoMode ? "rgba(16,185,129,0.3)" : "transparent"}`,
+                    transition: "all 0.15s ease" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <Battery size={14} color={params.ecoMode ? "#10b981" : D.text2} />
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: params.ecoMode ? "#34d399" : D.text1, lineHeight: 1.2 }}>Battery Saver</div>
+                      <div style={{ fontSize: 10, color: D.text2, marginTop: 2 }}>Reduces animation to 30fps</div>
+                    </div>
+                  </div>
+                  <DarkToggle checked={params.ecoMode} onChange={v => upd("ecoMode", v)} />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }

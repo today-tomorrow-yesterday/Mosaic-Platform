@@ -8,6 +8,15 @@ import {
 import { useUser, useClerk } from '@clerk/nextjs'
 import { GlassFilterSvg, GlassLabPanel, glassBackdropFilter, DEFAULT_GLASS } from './GlassLab'
 import type { GlassParams } from './GlassLab'
+import { FluidBackground } from './backgrounds/FluidBackground'
+import { RainBackground } from './backgrounds/RainBackground'
+import { AbstractBackground } from './backgrounds/AbstractBackground'
+import { ParticleBackground } from './backgrounds/ParticleBackground'
+import { LaserBackground } from './backgrounds/LaserBackground'
+import { WaveBackground } from './backgrounds/WaveBackground'
+import { TunnelBackground } from './backgrounds/TunnelBackground'
+import { PatternBackground } from './backgrounds/PatternBackground'
+import { ForestBackground } from './backgrounds/ForestBackground'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -777,23 +786,63 @@ export function DashboardClient({
             backgroundSize: '200% 200%', zIndex: 0,
           }}
         />
-        {/* Stack background image (per-profile, selected via Lab) */}
+        {/* Stack background — per-stack type + image, animated only on front card */}
         {(() => {
-          const stackBg = glassParams.stackBgImages[profile.id] ?? null
+          const sb = glassParams.stackBackgrounds[profile.id]
+          const effectiveBgType = sb?.backgroundType ?? glassParams.backgroundType
+          const effectiveBgImage = sb?.bgImage ?? glassParams.bgImage
+          const hasAnimatedBg = effectiveBgType !== 'image'
           return (
             <>
-              {stackBg && (
+              {/* Static image background */}
+              {!hasAnimatedBg && effectiveBgImage && (
                 <div style={{ position: 'absolute', inset: -20, zIndex: 0, overflow: 'hidden', borderRadius: 'inherit' }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     className={glassParams.bgMotion ? 'glass-lab-drift' : undefined}
-                    src={stackBg.url}
+                    src={effectiveBgImage.url}
                     alt=""
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: stackBg.position, display: 'block', ...(glassParams.bgMotion ? { animationDuration: `${glassParams.bgMotionSpeed}s` } : {}) }}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: effectiveBgImage.position, display: 'block', ...(glassParams.bgMotion ? { animationDuration: `${glassParams.bgMotionSpeed}s` } : {}) }}
                   />
                 </div>
               )}
-              <div className={`absolute inset-0 z-10 transition-colors duration-300 pointer-events-none ${stackBg !== null ? 'bg-black/15' : 'bg-black/40'} ${stackPosition > 0 ? 'group-hover:bg-black/10' : ''}`} />
+              {/* Animated background — only renders on the front (visible) stack card
+                  to avoid running multiple WebGL renderers simultaneously */}
+              {hasAnimatedBg && isFrontCard && (
+                <div style={{ position: 'absolute', inset: 0, zIndex: 0, overflow: 'hidden', borderRadius: 'inherit' }}>
+                  {effectiveBgType === 'fluid' && (
+                    <FluidBackground params={{
+                      fluidSpeed: glassParams.fluidSpeed, fluidZoom: glassParams.fluidZoom,
+                      fluidComplexity: glassParams.fluidComplexity, fluidMorphSpeed: glassParams.fluidMorphSpeed,
+                      fluidMorphIntensity: glassParams.fluidMorphIntensity, fluidTheme: glassParams.fluidTheme,
+                      ecoMode: glassParams.ecoMode,
+                    }} />
+                  )}
+                  {effectiveBgType === 'rain' && (
+                    <RainBackground params={{ rainOpacity: glassParams.rainOpacity, rainBgColor: glassParams.rainBgColor }} />
+                  )}
+                  {effectiveBgType === 'abstract' && (
+                    <AbstractBackground params={{
+                      abstractSpeed: glassParams.abstractSpeed,
+                      abstractTheme: glassParams.abstractTheme,
+                      ecoMode: glassParams.ecoMode,
+                    }} />
+                  )}
+                  {effectiveBgType === 'particles' && <ParticleBackground params={{
+                    ecoMode: glassParams.ecoMode, bgColor: glassParams.particleBgColor,
+                    minWind: glassParams.particleMinWind, maxWind: glassParams.particleMaxWind,
+                    minSize: 16, maxSize: 57, emitterY: 0.4, emitterSpread: 0.35,
+                    gravity: glassParams.particleGravity, turbulence: glassParams.particleTurbulence,
+                    rotationSpeed: 0, tumbleStrength: 0.4, staticTilt: 0, particleCount: glassParams.particleCount,
+                  }} />}
+                  {effectiveBgType === 'lasers' && <LaserBackground params={{ ecoMode: glassParams.ecoMode }} />}
+                  {effectiveBgType === 'waves' && <WaveBackground params={{ ecoMode: glassParams.ecoMode }} />}
+                  {effectiveBgType === 'tunnel' && <TunnelBackground params={{ ecoMode: glassParams.ecoMode }} />}
+                  {effectiveBgType === 'pattern' && <PatternBackground params={{ ecoMode: glassParams.ecoMode }} />}
+                  {effectiveBgType === 'forest' && <ForestBackground params={{ ecoMode: glassParams.ecoMode }} />}
+                </div>
+              )}
+              <div className={`absolute inset-0 z-10 transition-colors duration-300 pointer-events-none ${(effectiveBgImage !== null || hasAnimatedBg) ? 'bg-black/15' : 'bg-black/40'} ${stackPosition > 0 ? 'group-hover:bg-black/10' : ''}`} />
             </>
           )
         })()}
@@ -854,19 +903,6 @@ export function DashboardClient({
                     className="hover:bg-white/10 hover:text-white transition-colors duration-200"
                   >
                     <Home size={15} /> Launchpad
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setLabOpen(o => !o) }}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 9999,
-                      backgroundColor: labOpen ? 'rgba(96,165,250,0.15)' : 'rgba(255,255,255,0.05)',
-                      border: `1px solid ${labOpen ? 'rgba(96,165,250,0.3)' : 'rgba(255,255,255,0.05)'}`,
-                      color: labOpen ? '#93c5fd' : '#d1d5db',
-                      fontSize: 13, fontWeight: 500, cursor: 'pointer',
-                    }}
-                    className="hover:bg-white/10 transition-colors duration-200"
-                  >
-                    <FlaskConical size={15} /> Lab
                   </button>
                 </>
               )}
@@ -1358,13 +1394,42 @@ export function DashboardClient({
         </div>
       </div>
 
+      {/* ── Fixed Lab trigger — right edge, vertically centered ── */}
+      <button
+        onClick={() => setLabOpen(o => !o)}
+        title="Glass Lab"
+        style={{
+          position: 'fixed', right: 0, top: '50%', transform: 'translateY(-50%)',
+          zIndex: 198, width: 30, height: 76,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5,
+          borderRadius: '10px 0 0 10px',
+          background: labOpen ? 'rgba(96,165,250,0.18)' : 'rgba(9,9,19,0.82)',
+          backdropFilter: 'blur(14px)',
+          border: `1px solid ${labOpen ? 'rgba(96,165,250,0.35)' : 'rgba(255,255,255,0.1)'}`,
+          borderRight: 'none',
+          cursor: 'pointer',
+          transition: 'all 0.2s ease',
+        }}
+      >
+        <FlaskConical size={13} color={labOpen ? '#93c5fd' : 'rgba(255,255,255,0.45)'} />
+        <span style={{
+          fontSize: 7, fontWeight: 800, letterSpacing: '0.14em',
+          color: labOpen ? '#93c5fd' : 'rgba(255,255,255,0.35)',
+          writingMode: 'vertical-rl', transform: 'rotate(180deg)',
+          textTransform: 'uppercase', userSelect: 'none',
+        }}>LAB</span>
+      </button>
+
       {/* ── Glass Laboratory panel ── */}
       {labOpen && (
         <GlassLabPanel
           params={glassParams}
           onChange={setGlassParams}
           onClose={() => setLabOpen(false)}
-          profiles={profiles.map(p => ({ id: p.id, name: p.name }))}
+          profiles={order.map(id => {
+            const p = profiles.find(x => x.id === id)
+            return p ? { id: p.id, name: p.name } : null
+          }).filter((p): p is { id: string; name: string } => p !== null)}
         />
       )}
     </>
