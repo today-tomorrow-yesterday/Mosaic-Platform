@@ -583,6 +583,37 @@ export function GlassLabPanel({ params, onChange, onClose, profiles }: GlassLabP
           from { opacity: 1; transform: translateY(0); }
           to   { opacity: 0; transform: translateY(-8px); }
         }
+        .glab-tab {
+          position: relative;
+          border-radius: 6px 6px 0 0;
+          transition: color 0.15s ease, background 0.18s ease;
+        }
+        .glab-tab::after {
+          content: '';
+          position: absolute;
+          bottom: -1px; left: 8px; right: 8px;
+          height: 2px;
+          border-radius: 2px 2px 0 0;
+          background: rgba(147,197,253,0.45);
+          transform: scaleX(0);
+          transition: transform 0.2s cubic-bezier(0.22,1,0.36,1), opacity 0.2s ease;
+          opacity: 0;
+        }
+        .glab-tab:hover {
+          background: rgba(255,255,255,0.07) !important;
+          color: rgba(255,255,255,0.78) !important;
+        }
+        .glab-tab:hover::after {
+          transform: scaleX(1);
+          opacity: 1;
+        }
+        .glab-tab.glab-tab-active::after {
+          display: none;
+        }
+        .glab-tab:active {
+          background: rgba(255,255,255,0.11) !important;
+          transform: translateY(1px);
+        }
       `}</style>
 
       {/* Click-away backdrop */}
@@ -636,12 +667,13 @@ export function GlassLabPanel({ params, onChange, onClose, profiles }: GlassLabP
           }}>
             {tabs.map(t => (
               <button key={t.id} onClick={() => setTab(t.id)}
+                className={`glab-tab${tab === t.id ? " glab-tab-active" : ""}`}
                 style={{ display: "flex", alignItems: "center", gap: 5, padding: "0 10px",
                   border: "none", cursor: "pointer", fontSize: 11, fontWeight: 600,
                   background: "transparent",
                   color: tab === t.id ? D.text1 : D.text2,
                   borderBottom: `2px solid ${tab === t.id ? D.accent : "transparent"}`,
-                  transition: "all 0.15s ease", marginBottom: -1 }}>
+                  marginBottom: -1 }}>
                 {t.icon} {t.label}
               </button>
             ))}
