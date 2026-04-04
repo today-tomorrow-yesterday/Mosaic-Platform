@@ -77,7 +77,9 @@ export type GlassParams = {
   ambientFloat: boolean
   floatSpeed: number
   tilt3d: boolean
+  tilt3dStrength: number          // multiplier for 3D tilt intensity (0-3)
   magnetic: boolean
+  magneticStrength: number        // multiplier for magnetic pull intensity (0-3)
 }
 
 export const DEFAULT_GLASS: GlassParams = {
@@ -128,7 +130,9 @@ export const DEFAULT_GLASS: GlassParams = {
   ambientFloat: false,
   floatSpeed: 6,
   tilt3d: false,
+  tilt3dStrength: 1.0,
   magnetic: false,
+  magneticStrength: 1.0,
 }
 
 // ── Background image registry ────────────────────────────────────────────────
@@ -551,6 +555,8 @@ export function GlassLabPanel({ params, onChange, onClose, profiles }: GlassLabP
     { id: "motion" as const, label: "Motion",      icon: <Sparkles size={12} /> },
   ]
 
+  // Panel expands from the button's exact dimensions (44×110) anchored at bottom-right.
+  // scaleX = 44/362 ≈ 0.122,  scaleY = 110/682 ≈ 0.161  (362/682 = panel + 1px shimmer padding)
   const PANEL_W = 360
   const PANEL_H = 680
   const HEADER_H = 42
@@ -559,22 +565,37 @@ export function GlassLabPanel({ params, onChange, onClose, profiles }: GlassLabP
   return (
     <>
       <style>{`
-        @keyframes glabIn  { from { opacity:0; transform:translateY(-50%) translateX(20px); } to { opacity:1; transform:translateY(-50%) translateX(0); } }
-        @keyframes glabOut { from { opacity:1; transform:translateY(-50%) translateX(0); }   to { opacity:0; transform:translateY(-50%) translateX(20px); } }
+        @keyframes glabIn {
+          0%   { width: 45px;  height: 112px; border-radius: 12px 0 0 12px; animation-timing-function: cubic-bezier(0.4,0,0.2,1); }
+          38%  { width: 361px; height: 112px; border-radius: 16px 0 0 16px; animation-timing-function: cubic-bezier(0.16,1,0.3,1); }
+          100% { width: 361px; height: 682px; border-radius: 16px 0 0 16px; }
+        }
+        @keyframes glabOut {
+          0%   { width: 361px; height: 682px; border-radius: 16px 0 0 16px; animation-timing-function: cubic-bezier(0.4,0,0.2,1); }
+          62%  { width: 361px; height: 112px; border-radius: 16px 0 0 16px; animation-timing-function: cubic-bezier(0.4,0,0.2,1); }
+          100% { width: 45px;  height: 112px; border-radius: 12px 0 0 12px; }
+        }
       `}</style>
 
       {/* Click-away backdrop */}
       <div onClick={handleClose} style={{ position: "fixed", inset: 0, zIndex: 199 }} />
 
-      <div style={{
-        position: "fixed", right: 48, top: "50%",
-        zIndex: 200, width: PANEL_W,
-        animation: closing ? "glabOut 200ms ease both" : "glabIn 260ms cubic-bezier(0.22,1,0.36,1) both",
-      }}>
+      {/* Shimmer wrapper — same class as the button, same anchor position */}
+      <div
+        className="lab-shimmer-wrap"
+        style={{
+          position: "fixed", right: 0, bottom: "12%",
+          zIndex: 200,
+          padding: "1px 0 1px 1px",
+          overflow: "hidden",
+          boxSizing: "border-box",
+          animation: closing ? "glabOut 320ms linear both" : "glabIn 520ms linear both",
+        }}
+      >
         <div style={{
-          width: PANEL_W, height: PANEL_H,
+          width: "100%", height: "100%",
           background: D.bg, backdropFilter: "blur(28px)",
-          border: `1px solid ${D.border}`, borderRadius: 16,
+          borderRadius: "inherit",
           boxShadow: "0 32px 80px rgba(0,0,0,0.75), inset 0 0 0 0.5px rgba(255,255,255,0.05)",
           display: "flex", flexDirection: "column", overflow: "hidden",
         }}>
@@ -797,7 +818,21 @@ export function GlassLabPanel({ params, onChange, onClose, profiles }: GlassLabP
                     </div>
                   )}
                   <ToggleRow label="3D Tilt"  sub="Cards tilt toward your cursor"  checked={params.tilt3d}  onChange={v => upd("tilt3d", v)} />
+                  {params.tilt3d && (
+                    <div style={{ padding: "4px 12px 8px" }}>
+                      <SegControl options={["Light", "Medium", "Heavy"]}
+                        value={params.tilt3dStrength <= 0.5 ? "Light" : params.tilt3dStrength <= 1.5 ? "Medium" : "Heavy"}
+                        onChange={v => upd("tilt3dStrength", v === "Light" ? 0.3 : v === "Medium" ? 1.0 : 2.5)} />
+                    </div>
+                  )}
                   <ToggleRow label="Magnetic" sub="Cards pull toward your cursor"   checked={params.magnetic} onChange={v => upd("magnetic", v)} />
+                  {params.magnetic && (
+                    <div style={{ padding: "4px 12px 8px" }}>
+                      <SegControl options={["Light", "Medium", "Heavy"]}
+                        value={params.magneticStrength <= 0.5 ? "Light" : params.magneticStrength <= 1.5 ? "Medium" : "Heavy"}
+                        onChange={v => upd("magneticStrength", v === "Light" ? 0.3 : v === "Medium" ? 1.0 : 2.5)} />
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ height: 1, background: D.divider, margin: "4px 0" }} />
