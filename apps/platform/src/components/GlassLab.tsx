@@ -566,14 +566,22 @@ export function GlassLabPanel({ params, onChange, onClose, profiles }: GlassLabP
     <>
       <style>{`
         @keyframes glabIn {
-          0%   { width: 45px;  height: 112px; border-radius: 12px 0 0 12px; animation-timing-function: cubic-bezier(0.4,0,0.2,1); }
-          38%  { width: 361px; height: 112px; border-radius: 16px 0 0 16px; animation-timing-function: cubic-bezier(0.16,1,0.3,1); }
+          0%   { width: 45px;  height: 112px; border-radius: 12px 0 0 12px; animation-timing-function: cubic-bezier(0.25,0.1,0.25,1); }
+          33%  { width: 361px; height: 112px; border-radius: 16px 0 0 16px; animation-timing-function: cubic-bezier(0.16,1,0.3,1); }
           100% { width: 361px; height: 682px; border-radius: 16px 0 0 16px; }
         }
         @keyframes glabOut {
-          0%   { width: 361px; height: 682px; border-radius: 16px 0 0 16px; animation-timing-function: cubic-bezier(0.4,0,0.2,1); }
-          62%  { width: 361px; height: 112px; border-radius: 16px 0 0 16px; animation-timing-function: cubic-bezier(0.4,0,0.2,1); }
+          0%   { width: 361px; height: 682px; border-radius: 16px 0 0 16px; animation-timing-function: cubic-bezier(0.4,0,0.6,0); }
+          52%  { width: 361px; height: 112px; border-radius: 16px 0 0 16px; animation-timing-function: cubic-bezier(0.4,0,0.2,1); }
           100% { width: 45px;  height: 112px; border-radius: 12px 0 0 12px; }
+        }
+        @keyframes glabElIn {
+          from { opacity: 0; transform: translateY(-10px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes glabElOut {
+          from { opacity: 1; transform: translateY(0); }
+          to   { opacity: 0; transform: translateY(-6px); }
         }
       `}</style>
 
@@ -589,7 +597,7 @@ export function GlassLabPanel({ params, onChange, onClose, profiles }: GlassLabP
           padding: "1px 0 1px 1px",
           overflow: "hidden",
           boxSizing: "border-box",
-          animation: closing ? "glabOut 320ms linear both" : "glabIn 520ms linear both",
+          animation: closing ? "glabOut 450ms linear both" : "glabIn 900ms linear both",
         }}
       >
         <div style={{
@@ -602,7 +610,11 @@ export function GlassLabPanel({ params, onChange, onClose, profiles }: GlassLabP
 
           {/* Header */}
           <div style={{ height: HEADER_H, flexShrink: 0, display: "flex", alignItems: "center",
-            justifyContent: "space-between", padding: "0 16px", borderBottom: `1px solid ${D.divider}` }}>
+            justifyContent: "space-between", padding: "0 16px", borderBottom: `1px solid ${D.divider}`,
+            animation: closing
+              ? "glabElOut 120ms ease both"
+              : "glabElIn 320ms cubic-bezier(0.22,1,0.36,1) 290ms both",
+          }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div style={{ width: 24, height: 3, borderRadius: 2, background: "rgba(255,255,255,0.12)" }} />
               <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: D.text2 }}>Glass Lab</span>
@@ -617,7 +629,11 @@ export function GlassLabPanel({ params, onChange, onClose, profiles }: GlassLabP
 
           {/* Tab bar */}
           <div style={{ height: TABBAR_H, flexShrink: 0, display: "flex", alignItems: "stretch",
-            padding: "0 8px", gap: 2, borderBottom: `1px solid ${D.divider}` }}>
+            padding: "0 8px", gap: 2, borderBottom: `1px solid ${D.divider}`,
+            animation: closing
+              ? "glabElOut 100ms ease both"
+              : "glabElIn 320ms cubic-bezier(0.22,1,0.36,1) 360ms both",
+          }}>
             {tabs.map(t => (
               <button key={t.id} onClick={() => setTab(t.id)}
                 style={{ display: "flex", alignItems: "center", gap: 5, padding: "0 10px",
@@ -632,7 +648,11 @@ export function GlassLabPanel({ params, onChange, onClose, profiles }: GlassLabP
           </div>
 
           {/* Tab content */}
-          <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+          <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column",
+            animation: closing
+              ? "glabElOut 80ms ease both"
+              : "glabElIn 340ms cubic-bezier(0.22,1,0.36,1) 430ms both",
+          }}>
 
             {/* ── Card Look ── */}
             {tab === "look" && (
