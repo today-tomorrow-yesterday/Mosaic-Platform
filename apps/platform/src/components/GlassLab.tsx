@@ -576,12 +576,12 @@ export function GlassLabPanel({ params, onChange, onClose, profiles }: GlassLabP
           100% { width: 45px;  height: 112px; border-radius: 12px 0 0 12px; }
         }
         @keyframes glabElIn {
-          from { opacity: 0; transform: translateY(-10px); }
+          from { opacity: 0; transform: translateY(-22px); }
           to   { opacity: 1; transform: translateY(0); }
         }
         @keyframes glabElOut {
           from { opacity: 1; transform: translateY(0); }
-          to   { opacity: 0; transform: translateY(-6px); }
+          to   { opacity: 0; transform: translateY(-8px); }
         }
       `}</style>
 
@@ -612,8 +612,8 @@ export function GlassLabPanel({ params, onChange, onClose, profiles }: GlassLabP
           <div style={{ height: HEADER_H, flexShrink: 0, display: "flex", alignItems: "center",
             justifyContent: "space-between", padding: "0 16px", borderBottom: `1px solid ${D.divider}`,
             animation: closing
-              ? "glabElOut 120ms ease both"
-              : "glabElIn 320ms cubic-bezier(0.22,1,0.36,1) 290ms both",
+              ? "glabElOut 100ms ease both"
+              : "glabElIn 360ms cubic-bezier(0.22,1,0.36,1) 880ms both",
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div style={{ width: 24, height: 3, borderRadius: 2, background: "rgba(255,255,255,0.12)" }} />
@@ -631,8 +631,8 @@ export function GlassLabPanel({ params, onChange, onClose, profiles }: GlassLabP
           <div style={{ height: TABBAR_H, flexShrink: 0, display: "flex", alignItems: "stretch",
             padding: "0 8px", gap: 2, borderBottom: `1px solid ${D.divider}`,
             animation: closing
-              ? "glabElOut 100ms ease both"
-              : "glabElIn 320ms cubic-bezier(0.22,1,0.36,1) 360ms both",
+              ? "glabElOut 80ms ease both"
+              : "glabElIn 360ms cubic-bezier(0.22,1,0.36,1) 960ms both",
           }}>
             {tabs.map(t => (
               <button key={t.id} onClick={() => setTab(t.id)}
@@ -650,8 +650,8 @@ export function GlassLabPanel({ params, onChange, onClose, profiles }: GlassLabP
           {/* Tab content */}
           <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column",
             animation: closing
-              ? "glabElOut 80ms ease both"
-              : "glabElIn 340ms cubic-bezier(0.22,1,0.36,1) 430ms both",
+              ? "glabElOut 60ms ease both"
+              : "glabElIn 360ms cubic-bezier(0.22,1,0.36,1) 1040ms both",
           }}>
 
             {/* ── Card Look ── */}

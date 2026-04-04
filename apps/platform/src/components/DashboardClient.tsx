@@ -431,6 +431,12 @@ export function DashboardClient({
   const glassParamsRef = useRef(glassParams)
   useEffect(() => { glassParamsRef.current = glassParams }, [glassParams])
   const [labOpen, setLabOpen] = useState(false)
+  const labOpenRef = useRef(false)
+  const [btnKey, setBtnKey] = useState(0)
+  useEffect(() => {
+    if (!labOpen && labOpenRef.current) setBtnKey(k => k + 1)
+    labOpenRef.current = labOpen
+  }, [labOpen])
   const [greeting, setGreeting] = useState('Good Evening')
   const [dateStr, setDateStr] = useState('')
 
@@ -1440,6 +1446,10 @@ export function DashboardClient({
           inherits: false;
         }
         @keyframes labShimmer { to { --lab-angle: 360deg; } }
+        @keyframes labBtnIn {
+          from { opacity: 0; transform: translateX(52px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
         .lab-shimmer-wrap {
           animation: labShimmer 2.64s linear infinite;
           background: conic-gradient(
@@ -1463,26 +1473,26 @@ export function DashboardClient({
           padding: '1px 0 1px 1px',
           opacity: labOpen ? 0 : 1,
           pointerEvents: labOpen ? 'none' : 'auto',
-          transition: 'opacity 0.18s ease',
         }}
       >
         <button
+          key={btnKey}
           onClick={() => setLabOpen(o => !o)}
           title="Glass Lab"
           style={{
             width: 44, height: 110,
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 7,
             borderRadius: '11px 0 0 11px',
-            background: labOpen ? 'rgba(20,20,40,0.95)' : 'rgba(9,9,19,0.88)',
+            background: 'rgba(9,9,19,0.88)',
             backdropFilter: 'blur(14px)',
             border: 'none', cursor: 'pointer',
-            transition: 'background 0.2s ease',
+            animation: 'labBtnIn 540ms cubic-bezier(0.22,1,0.36,1) both',
           }}
         >
-          <FlaskConical size={16} color={labOpen ? '#93c5fd' : 'rgba(255,255,255,0.45)'} />
+          <FlaskConical size={16} color='rgba(255,255,255,0.45)' />
           <span style={{
             fontSize: 8, fontWeight: 800, letterSpacing: '0.14em',
-            color: labOpen ? '#93c5fd' : 'rgba(255,255,255,0.35)',
+            color: 'rgba(255,255,255,0.35)',
             writingMode: 'vertical-rl', transform: 'rotate(180deg)',
             textTransform: 'uppercase', userSelect: 'none',
           }}>LAB</span>
