@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { useUser, useClerk } from '@clerk/nextjs'
 import { GlassFilterSvg, GlassLabPanel, glassBackdropFilter, DEFAULT_GLASS } from './GlassLab'
 import type { GlassParams } from './GlassLab'
+import { StudioClient } from '../app/studio/StudioClient'
 import { FluidBackground } from './backgrounds/FluidBackground'
 import { RainBackground } from './backgrounds/RainBackground'
 import { AbstractBackground } from './backgrounds/AbstractBackground'
@@ -41,6 +42,9 @@ const SWIPE_MAX_EXTRA_MS = 350
 /** Bento card expand/collapse: fallback duration when no expand state is active.
  *  ⚠️ LOCKED — 500ms balances speed and readability during card morph. */
 const CARD_EXPAND_FALLBACK_MS = 500
+
+/** Layout: approximate height of the chrome header panels so studio content clears them. */
+const CHROME_HEADER_HEIGHT_PX = 72
 
 /** Profile stack: rotation angles for the "scattered paper" effect on stacked cards.
  *  Position 0 (front) = 0°, position 1 = slight tilt, position 2 = more tilt.
@@ -432,6 +436,7 @@ export function DashboardClient({
   const glassParamsRef = useRef(glassParams)
   useEffect(() => { glassParamsRef.current = glassParams }, [glassParams])
   const [labOpen, setLabOpen] = useState(false)
+  const [mode, setMode] = useState<"home" | "studio" | "builder">("home")
   const labOpenRef = useRef(false)
   const [btnKey, setBtnKey] = useState(0)
   useEffect(() => {
@@ -442,6 +447,8 @@ export function DashboardClient({
   const [dateStr, setDateStr] = useState('')
 
   const bentoGridRef = useRef<HTMLDivElement>(null)
+  const studioCanvasRef = useRef<HTMLCanvasElement>(null)
+  const studioMouseRef = useRef({ x: -1000, y: -1000 })
   const activeViewRef = useRef<HTMLDivElement>(null)
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const probeRefs = useRef<Record<string, HTMLDivElement | null>>({})
@@ -450,6 +457,64 @@ export function DashboardClient({
     setGreeting(getGreeting())
     setDateStr(getDateStr())
   }, [])
+
+  // ── Studio graph canvas magnetic dot effect ────────────────────────────────
+  useEffect(() => {
+    if (mode !== 'studio' && mode !== 'builder') return
+    const canvas = studioCanvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    let active = true
+
+    const GRID = 28, RADIUS = 150, PULL = 12, DOT_BASE = 1.5, DOT_GLOW = 3
+
+    const resize = (): void => {
+      const p = canvas.parentElement
+      if (!p) return
+      canvas.width = p.clientWidth
+      canvas.height = p.clientHeight
+    }
+    resize()
+    const ro = new ResizeObserver(resize)
+    if (canvas.parentElement) ro.observe(canvas.parentElement)
+
+    const draw = (): void => {
+      if (!active) return
+      requestAnimationFrame(draw)
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      const { x: mx, y: my } = studioMouseRef.current
+      if (mx < -500) return
+
+      // Convert page coords to canvas-local coords
+      const rect = canvas.getBoundingClientRect()
+      const lx = mx - rect.left, ly = my - rect.top
+
+      const sc = Math.max(0, Math.floor((lx - RADIUS) / GRID))
+      const ec = Math.min(Math.ceil(canvas.width / GRID), Math.ceil((lx + RADIUS) / GRID))
+      const sr = Math.max(0, Math.floor((ly - RADIUS) / GRID))
+      const er = Math.min(Math.ceil(canvas.height / GRID), Math.ceil((ly + RADIUS) / GRID))
+
+      for (let c = sc; c <= ec; c++) {
+        for (let r = sr; r <= er; r++) {
+          const gx = c * GRID, gy = r * GRID
+          const dx = lx - gx, dy = ly - gy
+          const dist = Math.sqrt(dx * dx + dy * dy)
+          if (dist > RADIUS) continue
+          const intensity = Math.pow(1 - dist / RADIUS, 1.5)
+          const px = (dx / (dist || 1)) * PULL * intensity
+          const py = (dy / (dist || 1)) * PULL * intensity
+          ctx.beginPath()
+          ctx.arc(gx + px, gy + py, DOT_BASE + (DOT_GLOW - DOT_BASE) * intensity, 0, Math.PI * 2)
+          ctx.fillStyle = `rgba(96,165,250,${0.15 + intensity * 0.6})`
+          ctx.fill()
+        }
+      }
+    }
+    draw()
+
+    return () => { active = false; ro.disconnect() }
+  }, [mode])
 
   // ── Proximity Hover Engine (spotlight falloff) ──────────────────────────────
   //
@@ -883,7 +948,39 @@ export function DashboardClient({
                   {effectiveBgType === 'forest' && <ForestBackground params={{ ecoMode: glassParams.ecoMode }} />}
                 </div>
               )}
-              <div className={`absolute inset-0 z-10 transition-colors duration-300 pointer-events-none ${(effectiveBgImage !== null || hasAnimatedBg) ? 'bg-black/15' : 'bg-black/40'} ${stackPosition > 0 ? 'group-hover:bg-black/10' : ''}`} />
+              {/* Studio graph canvas background — replaces normal bg in studio/builder mode */}
+              {isFrontCard && mode !== 'home' && (
+                <div
+                  style={{
+                    position: 'absolute', inset: 0, zIndex: 1, overflow: 'hidden', borderRadius: 'inherit',
+                    opacity: 1,
+                    transition: 'opacity 480ms cubic-bezier(0.22, 1, 0.36, 1)',
+                  }}
+                >
+                  {/* Dark base to cover the gradient */}
+                  <div style={{ position: 'absolute', inset: 0, background: '#0c0b18' }} />
+                  {/* Dot grid */}
+                  <div style={{
+                    position: 'absolute', inset: '-20%', width: '140%', height: '140%',
+                    backgroundImage: 'radial-gradient(circle, rgba(96,165,250,0.35) 1.5px, transparent 1.5px)',
+                    backgroundSize: '28px 28px',
+                    animation: 'graphDrift 20s ease-in-out infinite',
+                    willChange: 'transform',
+                  }} />
+                  {/* Magnetic dot canvas */}
+                  <canvas
+                    ref={studioCanvasRef}
+                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', zIndex: 1 }}
+                  />
+                  {/* Radial vignette */}
+                  <div style={{
+                    position: 'absolute', inset: 0, zIndex: 2,
+                    background: 'radial-gradient(ellipse 60% 50% at 50% 50%, transparent 0%, rgba(12,11,24,0.6) 50%, rgba(12,11,24,0.95) 80%, #0c0b18 100%)',
+                  }} />
+                </div>
+              )}
+
+              <div className={`absolute inset-0 z-10 transition-colors duration-300 pointer-events-none ${(effectiveBgImage !== null || hasAnimatedBg || mode !== 'home') ? 'bg-black/15' : 'bg-black/40'} ${stackPosition > 0 ? 'group-hover:bg-black/10' : ''}`} />
             </>
           )
         })()}
@@ -939,19 +1036,31 @@ export function DashboardClient({
                 <>
                   <div style={{ width: 1, height: 20, backgroundColor: 'rgba(255,255,255,0.1)' }} />
                   <button
-                    onClick={resetStackToPrimary}
-                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 9999, backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.05)', color: '#d1d5db', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
+                    onClick={(e) => { e.stopPropagation(); setMode("home") }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 9999,
+                      backgroundColor: mode === "home" ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)',
+                      border: `1px solid ${mode === "home" ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.05)'}`,
+                      color: mode === "home" ? 'white' : '#d1d5db',
+                      fontSize: 13, fontWeight: 500, cursor: 'pointer',
+                    }}
                     className="hover:bg-white/10 hover:text-white transition-colors duration-200"
                   >
                     <Home size={15} /> Home
                   </button>
-                  <Link
-                    href="/studio"
-                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 9999, backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.05)', color: '#d1d5db', fontSize: 13, fontWeight: 500, cursor: 'pointer', textDecoration: 'none' }}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setMode("studio") }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 9999,
+                      backgroundColor: mode !== "home" ? 'rgba(96,165,250,0.15)' : 'rgba(255,255,255,0.05)',
+                      border: `1px solid ${mode !== "home" ? 'rgba(96,165,250,0.3)' : 'rgba(255,255,255,0.05)'}`,
+                      color: mode !== "home" ? '#93c5fd' : '#d1d5db',
+                      fontSize: 13, fontWeight: 500, cursor: 'pointer',
+                    }}
                     className="hover:bg-white/10 hover:text-white transition-colors duration-200"
                   >
                     <Wand2 size={15} /> Studio
-                  </Link>
+                  </button>
                 </>
               )}
             </div>
@@ -987,14 +1096,17 @@ export function DashboardClient({
             padding: Math.min(56, Math.max(24, containerW * 0.04)),
             display: 'flex', flexDirection: 'column',
           }}>
-            {/* Greeting + name */}
+            {/* Greeting + name — hidden in studio/builder mode */}
             <div
               className={swipeOutFadeClass}
               style={{
-                marginTop: 80, marginBottom: 28,
+                marginTop: mode === 'home' ? 80 : 0,
+                marginBottom: mode === 'home' ? 28 : 0,
+                maxHeight: mode === 'home' ? 300 : 0,
+                overflow: 'hidden',
                 transform: greetingTransform,
-                opacity: greetingOpacityVal,
-                transition: greetingTransition,
+                opacity: mode === 'home' ? greetingOpacityVal : 0,
+                transition: `${greetingTransition}, max-height 720ms cubic-bezier(0.25, 0.46, 0.45, 0.94), margin 720ms cubic-bezier(0.25, 0.46, 0.45, 0.94)`,
                 ...swipeOutDelayStyle,
               }}
             >
@@ -1024,12 +1136,21 @@ export function DashboardClient({
               </p>
             </div>
 
-            {/* Bento grid */}
+            {/* Content area — slides vertically between Home (bento grid) and Studio */}
             {!isClone && (
-              <div
-                ref={isFrontCard ? bentoGridRef : undefined}
-                style={{ flex: 1, position: 'relative', minHeight: 280, overflow: 'visible', perspective: 1000 }}
-              >
+              <div style={{ flex: 1, position: 'relative', minHeight: 280, overflow: (expand || mode === 'home') ? 'visible' : 'hidden' }}>
+                {/* Home mode — bento grid */}
+                <div
+                  ref={isFrontCard ? bentoGridRef : undefined}
+                  style={{
+                    position: 'absolute', inset: 0,
+                    overflow: 'visible', perspective: 1000,
+                    transform: mode === 'home' ? 'translateY(0)' : 'translateY(100%)',
+                    opacity: mode === 'home' ? 1 : 0,
+                    transition: expand ? 'none' : 'transform 600ms cubic-bezier(0.4, 0, 0.2, 1), opacity 400ms cubic-bezier(0.4, 0, 0.2, 1)',
+                    pointerEvents: mode === 'home' ? 'auto' : 'none',
+                  }}
+                >
                 {/* Invisible probes track original card positions for collapse animation */}
                 {isFrontCard && BENTO_CARDS.map(card => (
                   <div
@@ -1338,6 +1459,73 @@ export function DashboardClient({
                     </div>
                   )
                 })}
+                </div>
+
+                {/* Studio mode — app list, slides in from top.
+                    Top padding accounts for the chrome header panels that float above.
+                    Mouse move forwarded to studioMouseRef for magnetic dot effect on the stack background. */}
+                <div
+                  onMouseMove={(e) => { studioMouseRef.current = { x: e.clientX, y: e.clientY } }}
+                  onMouseLeave={() => { studioMouseRef.current = { x: -1000, y: -1000 } }}
+                  style={{
+                    position: 'absolute', inset: 0, overflow: 'auto',
+                    transform: mode === 'studio' ? 'translateY(0)' : 'translateY(-100%)',
+                    opacity: mode === 'studio' ? 1 : 0,
+                    transition: 'transform 600ms cubic-bezier(0.4, 0, 0.2, 1), opacity 400ms cubic-bezier(0.4, 0, 0.2, 1)',
+                    pointerEvents: mode === 'studio' ? 'auto' : 'none',
+                    display: 'flex', flexDirection: 'column', gap: 16,
+                    paddingTop: CHROME_HEADER_HEIGHT_PX + 12,
+                    paddingLeft: 16, paddingRight: 16, paddingBottom: 16,
+                  }}
+                >
+                  {/* Studio content — fills available space below chrome header */}
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24, position: 'relative', zIndex: 1 }}>
+
+                    {/* Create new app — centered hero */}
+                    <button
+                      onClick={() => setMode("builder")}
+                      className="transition-all duration-200 hover:scale-[1.02] hover:border-blue-400/50 active:scale-[0.98]"
+                      style={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                        width: '100%', maxWidth: 320, aspectRatio: '4/3',
+                        borderRadius: 20, cursor: 'pointer',
+                        background: 'rgba(96,165,250,0.06)', border: '2px dashed rgba(96,165,250,0.25)',
+                        color: '#60a5fa', gap: 12,
+                      }}
+                    >
+                      <div style={{
+                        width: 52, height: 52, borderRadius: 16,
+                        background: 'rgba(96,165,250,0.12)', border: '1px solid rgba(96,165,250,0.2)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        <Plus size={24} />
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <span style={{ fontSize: 15, fontWeight: 700, display: 'block' }}>Create New App</span>
+                        <span style={{ fontSize: 11, color: 'rgba(96,165,250,0.6)', marginTop: 4, display: 'block' }}>Describe it in plain English</span>
+                      </div>
+                    </button>
+
+                    {/* TODO: Prototype grid goes here when prototypes exist */}
+
+                  </div>
+                </div>
+
+                {/* Builder mode — full AI app builder, slides in from top.
+                    paddingTop clears the stack chrome header, matching the studio list. */}
+                <div
+                  style={{
+                    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                    overflow: 'hidden',
+                    paddingTop: CHROME_HEADER_HEIGHT_PX,
+                    transform: mode === 'builder' ? 'translateY(0)' : 'translateY(-100%)',
+                    opacity: mode === 'builder' ? 1 : 0,
+                    transition: 'transform 600ms cubic-bezier(0.4, 0, 0.2, 1), opacity 400ms cubic-bezier(0.4, 0, 0.2, 1)',
+                    pointerEvents: mode === 'builder' ? 'auto' : 'none',
+                  }}
+                >
+                  {mode === 'builder' && <StudioClient onBack={() => setMode("studio")} />}
+                </div>
               </div>
             )}
           </div>
@@ -1352,6 +1540,12 @@ export function DashboardClient({
     <>
       <style>{`
         @keyframes gradFlow { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
+        @keyframes graphDrift {
+          0%, 100% { transform: translate(0, 0); }
+          25% { transform: translate(-8px, 5px); }
+          50% { transform: translate(5px, -8px); }
+          75% { transform: translate(-3px, -4px); }
+        }
         .grad-flow { animation: gradFlow 15s ease infinite; will-change: background-position; }
 
         /* ⚠️ LOCKED — swipe-out animation: duration, rotation, and easing are hand-tuned.

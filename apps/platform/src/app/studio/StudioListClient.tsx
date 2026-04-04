@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useRef, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { useQuery } from "convex/react"
 import { api } from "../../../convex/_generated/api"
@@ -27,6 +27,87 @@ export function StudioListClient(): React.ReactElement {
   const [search, setSearch] = useState("")
   const [filter, setFilter] = useState<StatusFilter>("all")
 
+  // ── Magnetic dot canvas — draws displaced dots near the cursor ──────────
+  const magnetCanvasRef = useRef<HTMLCanvasElement>(null)
+  const mouseRef = useRef({ x: -1000, y: -1000 })
+  const rafRef = useRef(0)
+
+  useEffect(() => {
+    const canvas = magnetCanvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
+    let active = true
+
+    const resize = (): void => {
+      canvas.width = window.innerWidth
+      canvas.height = window.innerHeight
+    }
+    resize()
+    window.addEventListener("resize", resize)
+
+    const GRID = 28          // must match CSS grid size
+    const RADIUS = 150       // magnetic influence radius in px
+    const PULL_STRENGTH = 12 // max displacement toward cursor in px
+    const DOT_BASE = 1.5     // base dot radius
+    const DOT_GLOW = 3       // max dot radius at cursor center
+
+    const draw = (): void => {
+      if (!active) return
+      rafRef.current = requestAnimationFrame(draw)
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+      const mx = mouseRef.current.x
+      const my = mouseRef.current.y
+      if (mx < -500) return // cursor not on page
+
+      // Only draw dots within the influence radius for performance
+      const startCol = Math.max(0, Math.floor((mx - RADIUS) / GRID))
+      const endCol = Math.min(Math.ceil(canvas.width / GRID), Math.ceil((mx + RADIUS) / GRID))
+      const startRow = Math.max(0, Math.floor((my - RADIUS) / GRID))
+      const endRow = Math.min(Math.ceil(canvas.height / GRID), Math.ceil((my + RADIUS) / GRID))
+
+      for (let col = startCol; col <= endCol; col++) {
+        for (let row = startRow; row <= endRow; row++) {
+          const gridX = col * GRID
+          const gridY = row * GRID
+          const dx = mx - gridX
+          const dy = my - gridY
+          const dist = Math.sqrt(dx * dx + dy * dy)
+
+          if (dist > RADIUS) continue
+
+          const intensity = Math.pow(1 - dist / RADIUS, 1.5)
+          // Pull the dot toward the cursor
+          const pullX = (dx / (dist || 1)) * PULL_STRENGTH * intensity
+          const pullY = (dy / (dist || 1)) * PULL_STRENGTH * intensity
+          const dotR = DOT_BASE + (DOT_GLOW - DOT_BASE) * intensity
+          const alpha = 0.15 + intensity * 0.6
+
+          ctx.beginPath()
+          ctx.arc(gridX + pullX, gridY + pullY, dotR, 0, Math.PI * 2)
+          ctx.fillStyle = `rgba(96, 165, 250, ${alpha})`
+          ctx.fill()
+        }
+      }
+    }
+    draw()
+
+    return () => {
+      active = false
+      if (rafRef.current) cancelAnimationFrame(rafRef.current)
+      window.removeEventListener("resize", resize)
+    }
+  }, [])
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    mouseRef.current = { x: e.clientX, y: e.clientY }
+  }, [])
+
+  const handleMouseLeave = useCallback(() => {
+    mouseRef.current = { x: -1000, y: -1000 }
+  }, [])
+
   const filtered = (prototypes ?? []).filter(p => {
     if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false
     if (filter === "all") return true
@@ -35,16 +116,25 @@ export function StudioListClient(): React.ReactElement {
   })
 
   return (
-    <div style={{
-      minHeight: "100vh", background: "#0c0b18", position: "relative", overflow: "hidden",
-      color: "white", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-    }}>
+    <div
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      style={{
+        minHeight: "100vh", background: "#0c0b18", position: "relative", overflow: "hidden",
+        color: "white", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      }}
+    >
       {/* Graph canvas background — dot grid with radial vignette */}
       <div style={{
         position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none",
       }}>
         {/* Dot grid */}
         <div className="studio-graph-grid" />
+        {/* Magnetic dot canvas — displaced dots follow cursor */}
+        <canvas
+          ref={magnetCanvasRef}
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", zIndex: 1 }}
+        />
         {/* Radial vignette — visible center, blurred/shadowed edges */}
         <div style={{
           position: "absolute", inset: 0,

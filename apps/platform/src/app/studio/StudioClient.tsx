@@ -590,7 +590,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
 
 // ── Main component ───────────────────────────────────────────────────────────
 
-export function StudioClient() {
+export function StudioClient({ onBack }: { onBack?: () => void } = {}) {
   const [messages,       setMessages]       = useState<Message[]>([])
   const [input,          setInput]          = useState("")
   const [isBuilding,     setIsBuilding]     = useState(false)
@@ -847,23 +847,31 @@ export function StudioClient() {
   // ── Root layout ───────────────────────────────────────────────────────────
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden" style={{ background: "radial-gradient(ellipse 140% 90% at 50% -5%, #1e1a38 0%, #0e0c1e 35%, #080614 70%, #060410 100%)" }}>
+    <div className="h-full flex flex-col overflow-hidden" style={{ background: "transparent" }}>
 
       {/* ── Header ── */}
       <header
-        className="flex-shrink-0 h-14 flex items-center justify-between px-4 gap-3 relative z-10"
-        style={{ background: "rgba(10,9,20,0.75)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}
+        className="flex-shrink-0 h-11 flex items-center justify-between px-4 gap-3 relative z-10"
+        style={{ background: "transparent", borderBottom: "1px solid rgba(255,255,255,0.05)" }}
       >
         <div className="flex items-center gap-3 min-w-0">
-          <Link
-            href="/"
-            className="w-8 h-8 rounded-full flex items-center justify-center transition-colors flex-shrink-0"
-            style={{ color: "rgba(255,255,255,0.4)" }}
-            onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.08)"; (e.currentTarget as HTMLAnchorElement).style.color = "rgba(255,255,255,0.9)" }}
-            onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; (e.currentTarget as HTMLAnchorElement).style.color = "rgba(255,255,255,0.4)" }}
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </Link>
+          {onBack ? (
+            <button
+              onClick={onBack}
+              className="w-8 h-8 rounded-full flex items-center justify-center transition-colors flex-shrink-0"
+              style={{ color: "rgba(255,255,255,0.4)", background: "none", border: "none", cursor: "pointer" }}
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+          ) : (
+            <Link
+              href="/studio"
+              className="w-8 h-8 rounded-full flex items-center justify-center transition-colors flex-shrink-0"
+              style={{ color: "rgba(255,255,255,0.4)" }}
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </Link>
+          )}
           <div className="w-px h-4 flex-shrink-0" style={{ background: "rgba(255,255,255,0.1)" }} />
           {isEditingName ? (
             <input
@@ -938,10 +946,7 @@ export function StudioClient() {
       {/* ── Phase 1: Fullscreen hero (no content yet) ── */}
       {!hasContent && (
         <div className="flex-1 flex flex-col items-center justify-center px-6 relative overflow-hidden">
-          {/* Large ambient bloom */}
-          <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 80% 60% at 50% 40%, color-mix(in srgb, var(--s-accent) 14%, transparent) 0%, transparent 65%)" }} />
-          {/* Subtle star-field */}
-          <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.14) 1px, transparent 1px)", backgroundSize: "52px 52px", opacity: 0.35 }} />
+          {/* Ambient bloom and star-field removed — the stack's graph canvas background provides the texture */}
 
           <div className="relative z-10 flex flex-col items-center text-center w-full max-w-xl">
             {/* Icon orb */}
@@ -1026,7 +1031,7 @@ export function StudioClient() {
       {hasContent && (
         <>
           {/* Mobile mode toggle — pill segmented control */}
-          <div className="md:hidden flex-shrink-0 px-4 py-2.5 border-b border-zinc-100 bg-white">
+          <div className="md:hidden flex-shrink-0 px-4 py-2.5 border-b" style={{ borderColor: "rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.04)" }}>
             <div className="flex bg-zinc-100 rounded-xl p-1">
               <button
                 onClick={() => setActiveTab("chat")}
@@ -1061,7 +1066,7 @@ export function StudioClient() {
 
             {/* ── Chat panel ── */}
             <div
-              className={`flex-col border-r border-zinc-100 overflow-hidden w-full md:w-[380px] md:flex-shrink-0
+              className={`flex-col border-r border-white/[0.06] overflow-hidden w-full md:w-[380px] md:flex-shrink-0
                 ${activeTab === "preview" ? "hidden md:flex" : "flex"}`}
             >
               {/* Chat header */}
@@ -1091,7 +1096,7 @@ export function StudioClient() {
 
               {/* Input area */}
               <div className="flex-shrink-0 p-4 border-t border-zinc-100">
-                <div className="flex items-end gap-2 bg-zinc-50 rounded-2xl border border-zinc-200 p-3 focus-within:border-zinc-300 transition-colors">
+                <div className="flex items-end gap-2 rounded-2xl border p-3 transition-colors" style={{ background: "rgba(255,255,255,0.06)", borderColor: "rgba(255,255,255,0.1)" }}>
                   <textarea
                     ref={textareaRef}
                     value={input}
@@ -1175,7 +1180,7 @@ export function StudioClient() {
                       style={{
                         border:       previewMode === "mobile" ? "8px solid #18181b" : "1px solid #e4e7eb",
                         borderRadius: previewMode === "mobile" ? 44 : 16,
-                        height:       "calc(100vh - 168px)",
+                        height:       "100%",
                       }}
                     >
                       <iframe
