@@ -582,6 +582,10 @@ export function GlassLabPanel({ params, onChange, onClose, profiles }: GlassLabP
           from { opacity: 1; transform: translateY(0); }
           to   { opacity: 0; transform: translateY(-8px); }
         }
+        @keyframes bgSettingsIn {
+          from { opacity: 0; transform: translateX(16px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
         .glab-tab {
           position: relative;
           border-radius: 6px 6px 0 0;
@@ -831,7 +835,8 @@ export function GlassLabPanel({ params, onChange, onClose, profiles }: GlassLabP
                   </div>
 
                   {/* Scrollable content for this stack */}
-                  <div style={{ flex: 1, overflow: "hidden", padding: "14px 16px", display: "flex", flexDirection: "column", gap: 14 }}>
+                  <div key={pid} style={{ flex: 1, overflow: "hidden", padding: "14px 16px", display: "flex", flexDirection: "column", gap: 14,
+                    animation: "bgSettingsIn 280ms cubic-bezier(0.22,1,0.36,1) both" }}>
 
                     {/* Page Background type */}
                     <div>
@@ -855,46 +860,49 @@ export function GlassLabPanel({ params, onChange, onClose, profiles }: GlassLabP
                       </div>
                     </div>
 
-                    {/* Type-specific settings (global params, displayed for current type) */}
-                    {effectiveBgType !== "image" && (
-                      <>
-                        <div style={{ height: 1, background: D.divider }} />
-                        <div>
-                          <SecLabel>{BG_TYPE_LABELS[effectiveBgType]} Settings</SecLabel>
-                          <BgTypeControls params={{ ...params, backgroundType: effectiveBgType }} onChange={onChange} />
-                        </div>
-                      </>
-                    )}
+                    {/* Settings for the selected type — keyed so React remounts on change, triggering slide-in */}
+                    <div key={`${pid}::${effectiveBgType}`}
+                      style={{ display: "flex", flexDirection: "column", gap: 14,
+                        animation: "bgSettingsIn 260ms cubic-bezier(0.22,1,0.36,1) both" }}>
 
-                    {effectiveBgType === "image" && (
-                      <>
-                        <div style={{ height: 1, background: D.divider }} />
-
-                        {/* Card background image */}
-                        <div>
-                          <SecLabel>Card Image</SecLabel>
-                          {renderImgPicker(effectiveBgImage, v => setStackBg(pid, { bgImage: v }))}
-                        </div>
-
-                        <div style={{ height: 1, background: D.divider }} />
-
-                        {/* BG motion — only relevant for image backgrounds */}
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      {effectiveBgType !== "image" && (
+                        <>
+                          <div style={{ height: 1, background: D.divider }} />
                           <div>
-                            <div style={{ fontSize: 12, fontWeight: 500, color: D.text1 }}>Background Motion</div>
-                            <div style={{ fontSize: 10, color: D.text2, marginTop: 1 }}>Parallax scroll · global</div>
+                            <SecLabel>{BG_TYPE_LABELS[effectiveBgType]} Settings</SecLabel>
+                            <BgTypeControls params={{ ...params, backgroundType: effectiveBgType }} onChange={onChange} />
                           </div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                            {params.bgMotion && (
-                              <div style={{ width: 100 }}>
-                                <LabSlider label="Speed" value={params.bgMotionSpeed} display={`${params.bgMotionSpeed}s`} min={3} max={30} step={1} onChange={v => upd("bgMotionSpeed", v)} />
-                              </div>
-                            )}
-                            <DarkToggle checked={params.bgMotion} onChange={v => upd("bgMotion", v)} />
+                        </>
+                      )}
+
+                      {effectiveBgType === "image" && (
+                        <>
+                          <div style={{ height: 1, background: D.divider }} />
+
+                          <div>
+                            <SecLabel>Card Image</SecLabel>
+                            {renderImgPicker(effectiveBgImage, v => setStackBg(pid, { bgImage: v }))}
                           </div>
-                        </div>
-                      </>
-                    )}
+
+                          <div style={{ height: 1, background: D.divider }} />
+
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                            <div>
+                              <div style={{ fontSize: 12, fontWeight: 500, color: D.text1 }}>Background Motion</div>
+                              <div style={{ fontSize: 10, color: D.text2, marginTop: 1 }}>Parallax scroll · global</div>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                              {params.bgMotion && (
+                                <div style={{ width: 100 }}>
+                                  <LabSlider label="Speed" value={params.bgMotionSpeed} display={`${params.bgMotionSpeed}s`} min={3} max={30} step={1} onChange={v => upd("bgMotionSpeed", v)} />
+                                </div>
+                              )}
+                              <DarkToggle checked={params.bgMotion} onChange={v => upd("bgMotion", v)} />
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               )
