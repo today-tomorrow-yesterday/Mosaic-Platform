@@ -509,10 +509,12 @@ export function DashboardClient({
       const isInside = e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom
 
       if (id === focusedId && intensity > 0) {
+        node.classList.remove('settling')
         node.style.setProperty('--prox-scale', String(1 + maxScaleIncrease * intensity))
         node.style.setProperty('--prox-y', `${maxLiftPx * intensity}px`)
         node.style.setProperty('--prox-dim', '0')
       } else {
+        node.classList.add('settling')
         node.style.setProperty('--prox-scale', String(1 - focusedIntensity * 0.03))
         node.style.setProperty('--prox-y', '0px')
         node.style.setProperty('--prox-dim', String(focusedIntensity * 0.35))
@@ -546,6 +548,7 @@ export function DashboardClient({
   const resetProximityHoverEffects = useCallback(() => {
     bentoCardRefs.current.forEach((node) => {
       if (!node) return
+      node.classList.add('settling')
       node.style.setProperty('--prox-scale', '1')
       node.style.setProperty('--prox-y', '0px')
       node.style.setProperty('--prox-dim', '0')
@@ -1394,7 +1397,7 @@ export function DashboardClient({
            CSS variables are set by calculateProximityHoverEffects() via style.setProperty().
            Do not move transform to inline styles — React re-renders will wipe the variables. */
         .bento-prox-container {
-          transition: transform 0.15s ease-out;
+          transition: transform 0.13s linear;
           will-change: transform;
           transform:
             scale(var(--prox-scale, 1))
@@ -1402,6 +1405,9 @@ export function DashboardClient({
             translate3d(var(--mag-x, 0px), var(--mag-y, 0px), 0)
             rotateX(var(--tilt-rx, 0deg))
             rotateY(var(--tilt-ry, 0deg));
+        }
+        .bento-prox-container.settling {
+          transition: transform 0.72s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
         .bento-prox-dim {
           position: absolute;
@@ -1411,7 +1417,7 @@ export function DashboardClient({
           pointer-events: none;
           border-radius: inherit;
           opacity: var(--prox-dim, 0);
-          transition: opacity 0.2s ease-out;
+          transition: opacity 0.55s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
 
         .no-underline { text-decoration: none; }
