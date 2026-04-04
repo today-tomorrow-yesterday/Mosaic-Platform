@@ -866,31 +866,35 @@ export function GlassLabPanel({ params, onChange, onClose, profiles }: GlassLabP
                       </>
                     )}
 
-                    <div style={{ height: 1, background: D.divider }} />
+                    {effectiveBgType === "image" && (
+                      <>
+                        <div style={{ height: 1, background: D.divider }} />
 
-                    {/* Card background image */}
-                    <div>
-                      <SecLabel>Card Image</SecLabel>
-                      {renderImgPicker(effectiveBgImage, v => setStackBg(pid, { bgImage: v }))}
-                    </div>
+                        {/* Card background image */}
+                        <div>
+                          <SecLabel>Card Image</SecLabel>
+                          {renderImgPicker(effectiveBgImage, v => setStackBg(pid, { bgImage: v }))}
+                        </div>
 
-                    <div style={{ height: 1, background: D.divider }} />
+                        <div style={{ height: 1, background: D.divider }} />
 
-                    {/* BG motion (global) */}
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <div>
-                        <div style={{ fontSize: 12, fontWeight: 500, color: D.text1 }}>Background Motion</div>
-                        <div style={{ fontSize: 10, color: D.text2, marginTop: 1 }}>Parallax scroll · global</div>
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        {params.bgMotion && (
-                          <div style={{ width: 100 }}>
-                            <LabSlider label="Speed" value={params.bgMotionSpeed} display={`${params.bgMotionSpeed}s`} min={3} max={30} step={1} onChange={v => upd("bgMotionSpeed", v)} />
+                        {/* BG motion — only relevant for image backgrounds */}
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                          <div>
+                            <div style={{ fontSize: 12, fontWeight: 500, color: D.text1 }}>Background Motion</div>
+                            <div style={{ fontSize: 10, color: D.text2, marginTop: 1 }}>Parallax scroll · global</div>
                           </div>
-                        )}
-                        <DarkToggle checked={params.bgMotion} onChange={v => upd("bgMotion", v)} />
-                      </div>
-                    </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            {params.bgMotion && (
+                              <div style={{ width: 100 }}>
+                                <LabSlider label="Speed" value={params.bgMotionSpeed} display={`${params.bgMotionSpeed}s`} min={3} max={30} step={1} onChange={v => upd("bgMotionSpeed", v)} />
+                              </div>
+                            )}
+                            <DarkToggle checked={params.bgMotion} onChange={v => upd("bgMotion", v)} />
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               )
