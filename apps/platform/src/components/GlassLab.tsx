@@ -470,7 +470,7 @@ function BgTypeControls({ params, onChange }: { params: GlassParams; onChange: (
 
 export function GlassLabPanel({ params, onChange, onClose, profiles }: GlassLabPanelProps): React.ReactElement {
   const [closing, setClosing] = useState(false)
-  const [tab, setTab] = useState<"look" | "bg" | "motion">("look")
+  const [tab, setTab] = useState<"look" | "bg">("look")
   const [selIdx, setSelIdx] = useState(0)           // which stack is being edited in Background tab
   const [userImages, setUserImages] = useState<BgEntry[]>([])
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -550,9 +550,8 @@ export function GlassLabPanel({ params, onChange, onClose, profiles }: GlassLabP
   )
 
   const tabs = [
-    { id: "look"   as const, label: "Card Look",   icon: <Layers size={12} /> },
-    { id: "bg"     as const, label: "Background",  icon: <ImageIcon size={12} /> },
-    { id: "motion" as const, label: "Motion",      icon: <Sparkles size={12} /> },
+    { id: "look" as const, label: "Card",       icon: <Layers size={12} /> },
+    { id: "bg"   as const, label: "Background", icon: <ImageIcon size={12} /> },
   ]
 
   // Panel expands from the button's exact dimensions (44×110) anchored at bottom-right.
@@ -740,6 +739,65 @@ export function GlassLabPanel({ params, onChange, onClose, profiles }: GlassLabP
                       onChange={v => upd("tint", v === "Light" ? "light" : "dark")} />
                   </div>
                 </div>
+
+                <div style={{ height: 1, background: D.divider }} />
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <SecLabel>Motion</SecLabel>
+                  <div onClick={() => upd("ambientFloat", !params.ambientFloat)}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+                      padding: "9px 12px", borderRadius: 10, cursor: "pointer",
+                      background: params.ambientFloat ? D.rowActive : "transparent",
+                      border: `1px solid ${params.ambientFloat ? "rgba(255,255,255,0.1)" : "transparent"}`,
+                      transition: "all 0.15s ease" }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: D.text1, lineHeight: 1.2 }}>Ambient Float</div>
+                      <div style={{ fontSize: 10, color: D.text2, marginTop: 2 }}>Cards gently bob up and down</div>
+                    </div>
+                    <DarkToggle checked={params.ambientFloat} onChange={v => upd("ambientFloat", v)} />
+                  </div>
+                  {params.ambientFloat && (
+                    <div style={{ padding: "4px 12px 8px" }}>
+                      <SegControl options={["Slow","Medium","Fast"]}
+                        value={params.floatSpeed >= 9 ? "Slow" : params.floatSpeed >= 5 ? "Medium" : "Fast"}
+                        onChange={v => upd("floatSpeed", v === "Slow" ? 10 : v === "Medium" ? 6 : 3)} />
+                    </div>
+                  )}
+                  <ToggleRow label="3D Tilt"  sub="Cards tilt toward your cursor"  checked={params.tilt3d}  onChange={v => upd("tilt3d", v)} />
+                  {params.tilt3d && (
+                    <div style={{ padding: "4px 12px 8px" }}>
+                      <SegControl options={["Light", "Medium", "Heavy"]}
+                        value={params.tilt3dStrength <= 0.5 ? "Light" : params.tilt3dStrength <= 1.5 ? "Medium" : "Heavy"}
+                        onChange={v => upd("tilt3dStrength", v === "Light" ? 0.3 : v === "Medium" ? 1.0 : 2.5)} />
+                    </div>
+                  )}
+                  <ToggleRow label="Magnetic" sub="Cards pull toward your cursor"   checked={params.magnetic} onChange={v => upd("magnetic", v)} />
+                  {params.magnetic && (
+                    <div style={{ padding: "4px 12px 8px" }}>
+                      <SegControl options={["Light", "Medium", "Heavy"]}
+                        value={params.magneticStrength <= 0.5 ? "Light" : params.magneticStrength <= 1.5 ? "Medium" : "Heavy"}
+                        onChange={v => upd("magneticStrength", v === "Light" ? 0.3 : v === "Medium" ? 1.0 : 2.5)} />
+                    </div>
+                  )}
+
+                  <div style={{ height: 1, background: D.divider, margin: "4px 0" }} />
+
+                  <div onClick={() => upd("ecoMode", !params.ecoMode)}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+                      padding: "9px 12px", borderRadius: 10, cursor: "pointer",
+                      background: params.ecoMode ? "rgba(16,185,129,0.1)" : "transparent",
+                      border: `1px solid ${params.ecoMode ? "rgba(16,185,129,0.3)" : "transparent"}`,
+                      transition: "all 0.15s ease" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <Battery size={14} color={params.ecoMode ? "#10b981" : D.text2} />
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 500, color: params.ecoMode ? "#34d399" : D.text1, lineHeight: 1.2 }}>Battery Saver</div>
+                        <div style={{ fontSize: 10, color: D.text2, marginTop: 2 }}>Reduces animation to 30fps</div>
+                      </div>
+                    </div>
+                    <DarkToggle checked={params.ecoMode} onChange={v => upd("ecoMode", v)} />
+                  </div>
+                </div>
               </div>
             )}
 
@@ -846,66 +904,6 @@ export function GlassLabPanel({ params, onChange, onClose, profiles }: GlassLabP
             )}
 
             {/* ── Motion ── */}
-            {tab === "motion" && (
-              <div style={{ flex: 1, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 4 }}>
-                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4,
-                  opacity: anyMotion ? 1 : 0.55, transition: "opacity 0.2s ease" }}>
-                  <div onClick={() => upd("ambientFloat", !params.ambientFloat)}
-                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
-                      padding: "9px 12px", borderRadius: 10, cursor: "pointer",
-                      background: params.ambientFloat ? D.rowActive : "transparent",
-                      border: `1px solid ${params.ambientFloat ? "rgba(255,255,255,0.1)" : "transparent"}`,
-                      transition: "all 0.15s ease" }}>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 500, color: D.text1, lineHeight: 1.2 }}>Ambient Float</div>
-                      <div style={{ fontSize: 10, color: D.text2, marginTop: 2 }}>Cards gently bob up and down</div>
-                    </div>
-                    <DarkToggle checked={params.ambientFloat} onChange={v => upd("ambientFloat", v)} />
-                  </div>
-                  {params.ambientFloat && (
-                    <div style={{ padding: "4px 12px 8px" }}>
-                      <SegControl options={["Slow","Medium","Fast"]}
-                        value={params.floatSpeed >= 9 ? "Slow" : params.floatSpeed >= 5 ? "Medium" : "Fast"}
-                        onChange={v => upd("floatSpeed", v === "Slow" ? 10 : v === "Medium" ? 6 : 3)} />
-                    </div>
-                  )}
-                  <ToggleRow label="3D Tilt"  sub="Cards tilt toward your cursor"  checked={params.tilt3d}  onChange={v => upd("tilt3d", v)} />
-                  {params.tilt3d && (
-                    <div style={{ padding: "4px 12px 8px" }}>
-                      <SegControl options={["Light", "Medium", "Heavy"]}
-                        value={params.tilt3dStrength <= 0.5 ? "Light" : params.tilt3dStrength <= 1.5 ? "Medium" : "Heavy"}
-                        onChange={v => upd("tilt3dStrength", v === "Light" ? 0.3 : v === "Medium" ? 1.0 : 2.5)} />
-                    </div>
-                  )}
-                  <ToggleRow label="Magnetic" sub="Cards pull toward your cursor"   checked={params.magnetic} onChange={v => upd("magnetic", v)} />
-                  {params.magnetic && (
-                    <div style={{ padding: "4px 12px 8px" }}>
-                      <SegControl options={["Light", "Medium", "Heavy"]}
-                        value={params.magneticStrength <= 0.5 ? "Light" : params.magneticStrength <= 1.5 ? "Medium" : "Heavy"}
-                        onChange={v => upd("magneticStrength", v === "Light" ? 0.3 : v === "Medium" ? 1.0 : 2.5)} />
-                    </div>
-                  )}
-                </div>
-
-                <div style={{ height: 1, background: D.divider, margin: "4px 0" }} />
-
-                <div onClick={() => upd("ecoMode", !params.ecoMode)}
-                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
-                    padding: "9px 12px", borderRadius: 10, cursor: "pointer",
-                    background: params.ecoMode ? "rgba(16,185,129,0.1)" : "transparent",
-                    border: `1px solid ${params.ecoMode ? "rgba(16,185,129,0.3)" : "transparent"}`,
-                    transition: "all 0.15s ease" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <Battery size={14} color={params.ecoMode ? "#10b981" : D.text2} />
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 500, color: params.ecoMode ? "#34d399" : D.text1, lineHeight: 1.2 }}>Battery Saver</div>
-                      <div style={{ fontSize: 10, color: D.text2, marginTop: 2 }}>Reduces animation to 30fps</div>
-                    </div>
-                  </div>
-                  <DarkToggle checked={params.ecoMode} onChange={v => upd("ecoMode", v)} />
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
