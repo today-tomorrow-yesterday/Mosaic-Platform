@@ -80,6 +80,15 @@
   will-change: transform;
 }
 
+/* ── Ambient float — bento cards gently bob up/down ──────────── */
+@keyframes ambient-float {
+  0%, 100% { transform: translateY(0px); }
+  50%      { transform: translateY(-8px); }
+}
+.ambient-float-active {
+  animation: ambient-float var(--float-speed, 6s) ease-in-out infinite;
+}
+
 /* ── Glass Lab: panel enter/exit animations ──────────────────── */
 @keyframes glass-lab-in {
   from { opacity: 0; transform: translateY(16px) scale(0.98); }
