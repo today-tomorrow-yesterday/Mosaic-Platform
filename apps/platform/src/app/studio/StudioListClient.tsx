@@ -36,13 +36,60 @@ export function StudioListClient(): React.ReactElement {
 
   return (
     <div style={{
-      minHeight: "100vh", background: "radial-gradient(ellipse 120% 80% at 50% -10%, #16133a 0%, #0c0b18 38%, #07060e 70%, #060509 100%)",
+      minHeight: "100vh", background: "#0c0b18", position: "relative", overflow: "hidden",
       color: "white", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
     }}>
+      {/* Graph canvas background — dot grid with radial vignette */}
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none",
+      }}>
+        {/* Dot grid */}
+        <div className="studio-graph-grid" />
+        {/* Radial vignette — visible center, blurred/shadowed edges */}
+        <div style={{
+          position: "absolute", inset: 0,
+          background: "radial-gradient(ellipse 60% 50% at 50% 50%, transparent 0%, rgba(12,11,24,0.6) 50%, rgba(12,11,24,0.95) 80%, #0c0b18 100%)",
+        }} />
+      </div>
+
+      <style>{`
+        .studio-graph-grid {
+          position: absolute;
+          inset: -20%;
+          width: 140%;
+          height: 140%;
+          background-image: radial-gradient(circle, rgba(96,165,250,0.35) 1.5px, transparent 1.5px);
+          background-size: 28px 28px;
+          animation: graphDrift 20s ease-in-out infinite;
+          will-change: transform;
+        }
+        @keyframes graphDrift {
+          0%, 100% { transform: translate(0, 0); }
+          25% { transform: translate(-8px, 5px); }
+          50% { transform: translate(5px, -8px); }
+          75% { transform: translate(-3px, -4px); }
+        }
+      `}</style>
+      <style>{`
+        @keyframes studioElIn {
+          from { opacity: 0; transform: translateY(-16px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .studio-card-enter {
+          animation: studioCardIn 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+        @keyframes studioCardIn {
+          from { opacity: 0; transform: translateY(12px) scale(0.97); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+      `}</style>
+
       {/* Header */}
       <header style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "24px 32px", borderBottom: "1px solid rgba(255,255,255,0.06)",
+        position: "relative", zIndex: 1,
+        animation: "studioElIn 360ms cubic-bezier(0.22, 1, 0.36, 1) 100ms both",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <Link
@@ -77,7 +124,11 @@ export function StudioListClient(): React.ReactElement {
       </header>
 
       {/* Toolbar */}
-      <div style={{ padding: "20px 32px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+      <div style={{
+        padding: "20px 32px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
+        position: "relative", zIndex: 1,
+        animation: "studioElIn 360ms cubic-bezier(0.22, 1, 0.36, 1) 180ms both",
+      }}>
         {/* Search */}
         <div style={{
           display: "flex", alignItems: "center", gap: 8, padding: "8px 14px",
@@ -117,18 +168,21 @@ export function StudioListClient(): React.ReactElement {
       </div>
 
       {/* Grid */}
-      <div style={{ padding: "0 32px 64px", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 20 }}>
+      <div style={{
+        padding: "0 32px 64px", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 20,
+        position: "relative", zIndex: 1,
+      }}>
         {/* New App card */}
         <Link
           href="/studio/new"
+          className="studio-card-enter hover:bg-blue-500/10 hover:border-blue-400/40 transition-colors duration-200"
           style={{
             display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
             minHeight: 220, borderRadius: 20, textDecoration: "none",
+            animationDelay: "260ms",
             background: "rgba(96,165,250,0.06)", border: "2px dashed rgba(96,165,250,0.25)",
             color: "#60a5fa", cursor: "pointer", gap: 12,
-            transition: "all 0.2s ease",
           }}
-          className="hover:bg-blue-500/10 hover:border-blue-400/40"
         >
           <div style={{
             width: 48, height: 48, borderRadius: 14,
@@ -142,19 +196,20 @@ export function StudioListClient(): React.ReactElement {
         </Link>
 
         {/* Prototype cards */}
-        {filtered.map(proto => {
+        {filtered.map((proto, i) => {
           const status = STATUS_CONFIG[proto.status] ?? { label: "Prototype", color: "#60a5fa", bg: "rgba(96,165,250,0.1)", border: "rgba(96,165,250,0.2)" }
           return (
             <Link
               key={proto._id}
               href={`/studio/${proto._id}`}
+              className="studio-card-enter hover:bg-white/[0.06] hover:border-white/15 transition-colors duration-200"
               style={{
                 display: "flex", flexDirection: "column", minHeight: 220,
                 borderRadius: 20, textDecoration: "none", overflow: "hidden",
                 background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
-                transition: "all 0.2s ease", cursor: "pointer",
+                cursor: "pointer",
+                animationDelay: `${330 + i * 60}ms`,
               }}
-              className="hover:bg-white/[0.06] hover:border-white/15"
             >
               {/* Preview area */}
               <div style={{
