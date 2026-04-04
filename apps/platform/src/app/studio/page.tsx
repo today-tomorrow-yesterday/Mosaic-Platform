@@ -1,11 +1,11 @@
 import * as React from "react"
-import { StudioClient } from "./StudioClient"
+import { StudioListClient } from "./StudioListClient"
 
 export const metadata = {
   title: "AI Studio — Mosaic",
-  description: "Build working apps from plain English descriptions.",
+  description: "Build and manage your apps with AI.",
 }
 
 export default function StudioPage(): React.ReactElement {
-  return <StudioClient />
+  return <StudioListClient />
 }

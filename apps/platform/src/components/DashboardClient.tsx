@@ -3,8 +3,9 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import {
   ArrowUpRight, Home, Wallet, Baby, CalendarDays,
-  Hexagon, Users, X, Plus, ChevronRight, LogOut, UserRound, FlaskConical,
+  Hexagon, Users, X, Plus, ChevronRight, LogOut, UserRound, FlaskConical, Wand2,
 } from 'lucide-react'
+import Link from 'next/link'
 import { useUser, useClerk } from '@clerk/nextjs'
 import { GlassFilterSvg, GlassLabPanel, glassBackdropFilter, DEFAULT_GLASS } from './GlassLab'
 import type { GlassParams } from './GlassLab'
@@ -942,8 +943,15 @@ export function DashboardClient({
                     style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 9999, backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.05)', color: '#d1d5db', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
                     className="hover:bg-white/10 hover:text-white transition-colors duration-200"
                   >
-                    <Home size={15} /> Launchpad
+                    <Home size={15} /> Home
                   </button>
+                  <Link
+                    href="/studio"
+                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 9999, backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.05)', color: '#d1d5db', fontSize: 13, fontWeight: 500, cursor: 'pointer', textDecoration: 'none' }}
+                    className="hover:bg-white/10 hover:text-white transition-colors duration-200"
+                  >
+                    <Wand2 size={15} /> Studio
+                  </Link>
                 </>
               )}
             </div>
