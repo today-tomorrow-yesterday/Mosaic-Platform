@@ -17,7 +17,7 @@ export type EngineType = (typeof ENGINE)[keyof typeof ENGINE]
 
 export type BgSelection = { url: string; position: string } | null
 
-export type BackgroundType = "image" | "fluid" | "abstract" | "particles" | "lasers" | "waves" | "tunnel" | "pattern" | "rain" | "forest"
+export type BackgroundType = "image" | "fluid" | "abstract" | "particles" | "lasers" | "waves" | "tunnel" | "pattern" | "rain" | "forest" | "graph"
 
 export type GlassParams = {
   engine: EngineType
@@ -366,13 +366,13 @@ function SecLabel({ children }: { children: React.ReactNode }): React.ReactEleme
 const BG_TYPE_DOTS: Record<BackgroundType, string> = {
   image: "#a1a1aa", fluid: "#818cf8", abstract: "#34d399", particles: "#fbbf24",
   lasers: "#f87171", waves: "#38bdf8", tunnel: "#a78bfa", pattern: "#fb923c",
-  rain: "#60a5fa", forest: "#4ade80",
+  rain: "#60a5fa", forest: "#4ade80", graph: "#60a5fa",
 }
 
 const BG_TYPE_LABELS: Record<BackgroundType, string> = {
   image: "Image", fluid: "Fluid", abstract: "Abstract", particles: "Particles",
   lasers: "Lasers", waves: "Waves", tunnel: "Tunnel", pattern: "Pattern",
-  rain: "Rain", forest: "Forest",
+  rain: "Rain", forest: "Forest", graph: "Graph",
 }
 
 function BgTypeControls({ params, onChange }: { params: GlassParams; onChange: (p: GlassParams) => void }): React.ReactElement {

@@ -437,6 +437,14 @@ export function DashboardClient({
   useEffect(() => { glassParamsRef.current = glassParams }, [glassParams])
   const [labOpen, setLabOpen] = useState(false)
   const [mode, setMode] = useState<"home" | "studio" | "builder">("home")
+  const userBgTypeRef = useRef(glassParams.backgroundType)  // saves user's bg choice before studio swaps to graph
+
+  // Keep userBgTypeRef updated when the user changes bg via Lab (but not when studio auto-sets to graph)
+  useEffect(() => {
+    if (mode === 'home' && glassParams.backgroundType !== 'graph') {
+      userBgTypeRef.current = glassParams.backgroundType
+    }
+  }, [glassParams.backgroundType, mode])
   const labOpenRef = useRef(false)
   const [btnKey, setBtnKey] = useState(0)
   useEffect(() => {
@@ -504,9 +512,25 @@ export function DashboardClient({
           const intensity = Math.pow(1 - dist / RADIUS, 1.5)
           const px = (dx / (dist || 1)) * PULL * intensity
           const py = (dy / (dist || 1)) * PULL * intensity
+          const dotX = gx + px, dotY = gy + py
+          const dotR = DOT_BASE + (DOT_GLOW - DOT_BASE) * intensity
+
+          // Soft glow bloom behind the dot — scales with proximity
+          if (intensity > 0.15) {
+            const glowR = dotR + 8 * intensity
+            const grd = ctx.createRadialGradient(dotX, dotY, dotR * 0.5, dotX, dotY, glowR)
+            grd.addColorStop(0, `rgba(96,165,250,${intensity * 0.35})`)
+            grd.addColorStop(1, 'rgba(96,165,250,0)')
+            ctx.beginPath()
+            ctx.arc(dotX, dotY, glowR, 0, Math.PI * 2)
+            ctx.fillStyle = grd
+            ctx.fill()
+          }
+
+          // Solid dot
           ctx.beginPath()
-          ctx.arc(gx + px, gy + py, DOT_BASE + (DOT_GLOW - DOT_BASE) * intensity, 0, Math.PI * 2)
-          ctx.fillStyle = `rgba(96,165,250,${0.15 + intensity * 0.6})`
+          ctx.arc(dotX, dotY, dotR, 0, Math.PI * 2)
+          ctx.fillStyle = `rgba(96,165,250,${0.15 + intensity * 0.7})`
           ctx.fill()
         }
       }
@@ -946,37 +970,30 @@ export function DashboardClient({
                   {effectiveBgType === 'tunnel' && <TunnelBackground params={{ ecoMode: glassParams.ecoMode }} />}
                   {effectiveBgType === 'pattern' && <PatternBackground params={{ ecoMode: glassParams.ecoMode }} />}
                   {effectiveBgType === 'forest' && <ForestBackground params={{ ecoMode: glassParams.ecoMode }} />}
-                </div>
-              )}
-              {/* Studio graph canvas background — replaces normal bg in studio/builder mode */}
-              {isFrontCard && mode !== 'home' && (
-                <div
-                  style={{
-                    position: 'absolute', inset: 0, zIndex: 1, overflow: 'hidden', borderRadius: 'inherit',
-                    opacity: 1,
-                    transition: 'opacity 480ms cubic-bezier(0.22, 1, 0.36, 1)',
-                  }}
-                >
-                  {/* Dark base to cover the gradient */}
-                  <div style={{ position: 'absolute', inset: 0, background: '#0c0b18' }} />
-                  {/* Dot grid */}
-                  <div style={{
-                    position: 'absolute', inset: '-20%', width: '140%', height: '140%',
-                    backgroundImage: 'radial-gradient(circle, rgba(96,165,250,0.35) 1.5px, transparent 1.5px)',
-                    backgroundSize: '28px 28px',
-                    animation: 'graphDrift 20s ease-in-out infinite',
-                    willChange: 'transform',
-                  }} />
-                  {/* Magnetic dot canvas */}
-                  <canvas
-                    ref={studioCanvasRef}
-                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', zIndex: 1 }}
-                  />
-                  {/* Radial vignette */}
-                  <div style={{
-                    position: 'absolute', inset: 0, zIndex: 2,
-                    background: 'radial-gradient(ellipse 60% 50% at 50% 50%, transparent 0%, rgba(12,11,24,0.6) 50%, rgba(12,11,24,0.95) 80%, #0c0b18 100%)',
-                  }} />
+                  {effectiveBgType === 'graph' && (
+                    <>
+                      {/* Dark base */}
+                      <div style={{ position: 'absolute', inset: 0, background: '#0c0b18' }} />
+                      {/* Dot grid with drift */}
+                      <div style={{
+                        position: 'absolute', inset: '-20%', width: '140%', height: '140%',
+                        backgroundImage: 'radial-gradient(circle, rgba(96,165,250,0.4) 1.6px, transparent 1.6px)',
+                        backgroundSize: '28px 28px',
+                        animation: 'graphDrift 20s ease-in-out infinite',
+                        willChange: 'transform',
+                      }} />
+                      {/* Magnetic dot canvas */}
+                      <canvas
+                        ref={studioCanvasRef}
+                        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', zIndex: 1 }}
+                      />
+                      {/* Radial vignette */}
+                      <div style={{
+                        position: 'absolute', inset: 0, zIndex: 2,
+                        background: 'radial-gradient(ellipse 70% 60% at 50% 50%, transparent 0%, rgba(12,11,24,0.5) 50%, rgba(12,11,24,0.85) 75%, #0c0b18 100%)',
+                      }} />
+                    </>
+                  )}
                 </div>
               )}
 
@@ -1036,7 +1053,7 @@ export function DashboardClient({
                 <>
                   <div style={{ width: 1, height: 20, backgroundColor: 'rgba(255,255,255,0.1)' }} />
                   <button
-                    onClick={(e) => { e.stopPropagation(); setMode("home") }}
+                    onClick={(e) => { e.stopPropagation(); setMode("home"); setGlassParams(p => ({ ...p, backgroundType: userBgTypeRef.current })) }}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 9999,
                       backgroundColor: mode === "home" ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)',
@@ -1049,7 +1066,12 @@ export function DashboardClient({
                     <Home size={15} /> Home
                   </button>
                   <button
-                    onClick={(e) => { e.stopPropagation(); setMode("studio") }}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (mode === 'home') userBgTypeRef.current = glassParams.backgroundType
+                      setMode("studio")
+                      setGlassParams(p => ({ ...p, backgroundType: "graph" }))
+                    }}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 9999,
                       backgroundColor: mode !== "home" ? 'rgba(96,165,250,0.15)' : 'rgba(255,255,255,0.05)',
