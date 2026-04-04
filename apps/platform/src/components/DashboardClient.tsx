@@ -428,6 +428,8 @@ export function DashboardClient({
   const [hoveredStackId, setHoveredStackId] = useState<string | null>(null)
   const bentoCardRefs = useRef(new Map<string, HTMLDivElement>())
   const [glassParams, setGlassParams] = useState<GlassParams>(DEFAULT_GLASS)
+  const glassParamsRef = useRef(glassParams)
+  useEffect(() => { glassParamsRef.current = glassParams }, [glassParams])
   const [labOpen, setLabOpen] = useState(false)
   const [greeting, setGreeting] = useState('Good Evening')
   const [dateStr, setDateStr] = useState('')
@@ -489,22 +491,47 @@ export function DashboardClient({
     }
 
     // Pass 2: focused card scales up (no dim), siblings dim proportionally
+    // Also handles 3D tilt and magnetic pull when enabled via GlassParams
     bentoCardRefs.current.forEach((node, id) => {
       if (!node) return
       const intensity = intensities.get(id) ?? 0
+      const rect = node.getBoundingClientRect()
+      const centerX = rect.left + rect.width / 2
+      const centerY = rect.top + rect.height / 2
+      const mouseOffX = e.clientX - centerX
+      const mouseOffY = e.clientY - centerY
+      const isInside = e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom
 
       if (id === focusedId && intensity > 0) {
-        // Focused card: scale + lift, always fully bright
         node.style.setProperty('--prox-scale', String(1 + maxScaleIncrease * intensity))
         node.style.setProperty('--prox-y', `${maxLiftPx * intensity}px`)
         node.style.setProperty('--prox-dim', '0')
       } else {
-        // Sibling: shrink + dim based on how close the mouse is to the focused card
-        // focusedIntensity * 0.35 = max 35% dark overlay when mouse is directly on the focused card
-        // focusedIntensity * 0.08 = max 8% shrink (scale 0.92) when mouse is directly on the focused card
         node.style.setProperty('--prox-scale', String(1 - focusedIntensity * 0.03))
         node.style.setProperty('--prox-y', '0px')
         node.style.setProperty('--prox-dim', String(focusedIntensity * 0.35))
+      }
+
+      // 3D tilt — all cards look toward the cursor globally
+      if (glassParamsRef.current.tilt3d) {
+        const tStr = glassParamsRef.current.tilt3dStrength
+        const rawRx = Math.max(-25, Math.min(25, (-mouseOffY / 20) * tStr))
+        const rawRy = Math.max(-25, Math.min(25, (mouseOffX / 20) * tStr))
+        node.style.setProperty('--tilt-rx', `${rawRx}deg`)
+        node.style.setProperty('--tilt-ry', `${rawRy}deg`)
+      } else {
+        node.style.setProperty('--tilt-rx', '0deg')
+        node.style.setProperty('--tilt-ry', '0deg')
+      }
+
+      // Magnetic pull — card shifts toward cursor + tilts when mouse is inside
+      if (glassParamsRef.current.magnetic && isInside) {
+        const mStr = glassParamsRef.current.magneticStrength
+        node.style.setProperty('--mag-x', `${mouseOffX * 0.08 * mStr}px`)
+        node.style.setProperty('--mag-y', `${mouseOffY * 0.08 * mStr}px`)
+      } else {
+        node.style.setProperty('--mag-x', '0px')
+        node.style.setProperty('--mag-y', '0px')
       }
     })
   }, [expand])
@@ -516,6 +543,10 @@ export function DashboardClient({
       node.style.setProperty('--prox-scale', '1')
       node.style.setProperty('--prox-y', '0px')
       node.style.setProperty('--prox-dim', '0')
+      node.style.setProperty('--tilt-rx', '0deg')
+      node.style.setProperty('--tilt-ry', '0deg')
+      node.style.setProperty('--mag-x', '0px')
+      node.style.setProperty('--mag-y', '0px')
     })
     const activeEl = activeViewRef.current
     if (activeEl) activeEl.style.setProperty('--prox-focus', '0')
@@ -980,7 +1011,7 @@ export function DashboardClient({
             {!isClone && (
               <div
                 ref={isFrontCard ? bentoGridRef : undefined}
-                style={{ flex: 1, position: 'relative', minHeight: 280, overflow: 'visible' }}
+                style={{ flex: 1, position: 'relative', minHeight: 280, overflow: 'visible', perspective: 1000 }}
               >
                 {/* Invisible probes track original card positions for collapse animation */}
                 {isFrontCard && BENTO_CARDS.map(card => (
@@ -1046,6 +1077,7 @@ export function DashboardClient({
                     >
                     <div
                       ref={isFrontCard ? (el => { cardRefs.current[card.id] = el }) : undefined}
+                      className={glassParams.ambientFloat && !expand ? 'ambient-float-active' : undefined}
                       onClick={() => { if (!expand) expandCard(card.id) }}
                       onMouseEnter={() => { if (!expand) setHoveredCard(card.id) }}
                       onMouseLeave={() => setHoveredCard(null)}
@@ -1056,6 +1088,7 @@ export function DashboardClient({
                         overflow: 'hidden',
                         display: 'flex', flexDirection: 'column',
                         cursor: isThis ? 'default' : 'pointer',
+                        ...(glassParams.ambientFloat ? { '--float-speed': `${glassParams.floatSpeed}s`, animationDelay: `${cardIdx * -0.8}s` } as React.CSSProperties : {}),
                         background: `linear-gradient(145deg, ${card.glassTint} 0%, rgba(8,6,20,0.18) 100%)`,
                         boxShadow: '0 20px 60px rgba(0,0,0,0.6), 0 4px 16px rgba(0,0,0,0.35)',
                         transition: `border-radius ${expand?.dur ?? 300}ms cubic-bezier(0.4,0,0.2,1)`,
@@ -1357,7 +1390,12 @@ export function DashboardClient({
         .bento-prox-container {
           transition: transform 0.15s ease-out;
           will-change: transform;
-          transform: scale(var(--prox-scale, 1)) translateY(var(--prox-y, 0px));
+          transform:
+            scale(var(--prox-scale, 1))
+            translateY(var(--prox-y, 0px))
+            translate3d(var(--mag-x, 0px), var(--mag-y, 0px), 0)
+            rotateX(var(--tilt-rx, 0deg))
+            rotateY(var(--tilt-ry, 0deg));
         }
         .bento-prox-dim {
           position: absolute;
@@ -1394,31 +1432,62 @@ export function DashboardClient({
         </div>
       </div>
 
-      {/* ── Fixed Lab trigger — right edge, vertically centered ── */}
-      <button
-        onClick={() => setLabOpen(o => !o)}
-        title="Glass Lab"
+      {/* ── Fixed Lab trigger — right edge, shimmer border ── */}
+      <style>{`
+        @property --lab-angle {
+          syntax: '<angle>';
+          initial-value: 0deg;
+          inherits: false;
+        }
+        @keyframes labShimmer { to { --lab-angle: 360deg; } }
+        .lab-shimmer-wrap {
+          animation: labShimmer 2.64s linear infinite;
+          background: conic-gradient(
+            from var(--lab-angle) at 50% 50%,
+            transparent 0%,
+            transparent 52%,
+            rgba(147,197,253,0.0) 60%,
+            rgba(147,197,253,0.9) 68%,
+            rgba(196,181,253,1.0) 72%,
+            rgba(147,197,253,0.9) 76%,
+            rgba(147,197,253,0.0) 84%,
+            transparent 100%
+          );
+        }
+      `}</style>
+      <div
+        className="lab-shimmer-wrap"
         style={{
-          position: 'fixed', right: 0, top: '50%', transform: 'translateY(-50%)',
-          zIndex: 198, width: 30, height: 76,
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5,
-          borderRadius: '10px 0 0 10px',
-          background: labOpen ? 'rgba(96,165,250,0.18)' : 'rgba(9,9,19,0.82)',
-          backdropFilter: 'blur(14px)',
-          border: `1px solid ${labOpen ? 'rgba(96,165,250,0.35)' : 'rgba(255,255,255,0.1)'}`,
-          borderRight: 'none',
-          cursor: 'pointer',
-          transition: 'all 0.2s ease',
+          position: 'fixed', right: 0, bottom: '12%',
+          zIndex: 198, borderRadius: '12px 0 0 12px',
+          padding: '1px 0 1px 1px',
+          opacity: labOpen ? 0 : 1,
+          pointerEvents: labOpen ? 'none' : 'auto',
+          transition: 'opacity 0.18s ease',
         }}
       >
-        <FlaskConical size={13} color={labOpen ? '#93c5fd' : 'rgba(255,255,255,0.45)'} />
-        <span style={{
-          fontSize: 7, fontWeight: 800, letterSpacing: '0.14em',
-          color: labOpen ? '#93c5fd' : 'rgba(255,255,255,0.35)',
-          writingMode: 'vertical-rl', transform: 'rotate(180deg)',
-          textTransform: 'uppercase', userSelect: 'none',
-        }}>LAB</span>
-      </button>
+        <button
+          onClick={() => setLabOpen(o => !o)}
+          title="Glass Lab"
+          style={{
+            width: 44, height: 110,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 7,
+            borderRadius: '11px 0 0 11px',
+            background: labOpen ? 'rgba(20,20,40,0.95)' : 'rgba(9,9,19,0.88)',
+            backdropFilter: 'blur(14px)',
+            border: 'none', cursor: 'pointer',
+            transition: 'background 0.2s ease',
+          }}
+        >
+          <FlaskConical size={16} color={labOpen ? '#93c5fd' : 'rgba(255,255,255,0.45)'} />
+          <span style={{
+            fontSize: 8, fontWeight: 800, letterSpacing: '0.14em',
+            color: labOpen ? '#93c5fd' : 'rgba(255,255,255,0.35)',
+            writingMode: 'vertical-rl', transform: 'rotate(180deg)',
+            textTransform: 'uppercase', userSelect: 'none',
+          }}>LAB</span>
+        </button>
+      </div>
 
       {/* ── Glass Laboratory panel ── */}
       {labOpen && (

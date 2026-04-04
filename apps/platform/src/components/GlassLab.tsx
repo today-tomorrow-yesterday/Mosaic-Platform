@@ -482,7 +482,7 @@ export function GlassLabPanel({ params, onChange, onClose, profiles }: GlassLabP
 
   const handleClose = useCallback(() => {
     setClosing(true)
-    closeTimer.current = setTimeout(onClose, 200)
+    closeTimer.current = setTimeout(onClose, 450)
   }, [onClose])
 
   const upd = <K extends keyof GlassParams>(k: K, v: GlassParams[K]): void => onChange({ ...params, [k]: v })
@@ -656,7 +656,7 @@ export function GlassLabPanel({ params, onChange, onClose, profiles }: GlassLabP
 
             {/* ── Card Look ── */}
             {tab === "look" && (
-              <div style={{ flex: 1, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 14, overflowY: "auto" }}>
+              <div style={{ flex: 1, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 14, overflow: "hidden" }}>
                 <div>
                   <SecLabel>Glass Preset</SecLabel>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 7 }}>
@@ -741,7 +741,7 @@ export function GlassLabPanel({ params, onChange, onClose, profiles }: GlassLabP
                   </div>
 
                   {/* Scrollable content for this stack */}
-                  <div style={{ flex: 1, overflowY: "auto", padding: "14px 16px", display: "flex", flexDirection: "column", gap: 14 }}>
+                  <div style={{ flex: 1, overflow: "hidden", padding: "14px 16px", display: "flex", flexDirection: "column", gap: 14 }}>
 
                     {/* Page Background type */}
                     <div>
