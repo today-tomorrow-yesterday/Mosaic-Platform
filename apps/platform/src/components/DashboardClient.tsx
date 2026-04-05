@@ -675,6 +675,7 @@ export function DashboardClient({
     }
     const dur = calcExpandDuration(origin, activeRect.width, activeRect.height)
     setHoveredCard(null)
+    resetProximityHoverEffects()
     setExpand({ id, phase: 'locked', origin, target, dur })
   }, [expand])
 
