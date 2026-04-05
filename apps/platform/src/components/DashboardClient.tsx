@@ -1538,18 +1538,16 @@ export function DashboardClient({
                     position: 'absolute', inset: 0, overflow: 'auto',
                     transform: mode === 'studio' ? 'translateY(0) scale(1)' : mode === 'builder' ? 'translateY(0) scale(0.95)' : 'translateY(-100%) scale(1)',
                     opacity: mode === 'studio' || builderAnim !== 'idle' ? 1 : 0,
-                    transition: 'transform 600ms cubic-bezier(0.4, 0, 0.2, 1), opacity 400ms cubic-bezier(0.4, 0, 0.2, 1), padding 5000ms cubic-bezier(0.4,0,0.2,1)',
+                    transition: 'transform 600ms cubic-bezier(0.4, 0, 0.2, 1), opacity 400ms cubic-bezier(0.4, 0, 0.2, 1), padding 600ms cubic-bezier(0.4,0,0.2,1)',
                     pointerEvents: mode === 'studio' || builderAnim !== 'idle' ? 'auto' : 'none',
                     display: 'flex', flexDirection: 'column',
-                    gap: builderAnim === 'idle' || builderAnim === 'locked' ? 16 : 0,
-                    paddingTop: builderAnim === 'idle' || builderAnim === 'locked' ? CHROME_HEADER_HEIGHT_PX + 12 : 0,
-                    paddingLeft: builderAnim === 'idle' || builderAnim === 'locked' ? 16 : 0,
-                    paddingRight: builderAnim === 'idle' || builderAnim === 'locked' ? 16 : 0,
-                    paddingBottom: builderAnim === 'idle' || builderAnim === 'locked' ? 16 : 0,
+                    alignItems: builderAnim === 'idle' || builderAnim === 'locked' ? 'center' : 'stretch',
+                    justifyContent: builderAnim === 'idle' || builderAnim === 'locked' ? 'center' : 'stretch',
+                    padding: builderAnim === 'idle' || builderAnim === 'locked' ? `${CHROME_HEADER_HEIGHT_PX + 12}px 16px 16px` : 0,
                   }}
                 >
-                  {/* Create New App card — the card itself expands in place.
-                      Idle: small centered card. Expanding: grows to fill parent via flex.
+                  {/* Create New App card — expands in place to fill the stack.
+                      Idle: small centered card. Expanding: width/height transition to 100%.
                       StudioClient content lives inside, hidden until expanded. */}
                   <div
                     ref={createCardRef}
@@ -1560,23 +1558,21 @@ export function DashboardClient({
                       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                       color: '#60a5fa',
                       cursor: builderAnim === 'idle' ? 'pointer' : 'default',
-                      // Idle: fixed-size centered card
-                      // Expanding/open: fills parent via flex + alignSelf stretch
+                      // Idle/locked: small fixed-size card. Expanding/open: fills parent.
                       ...(builderAnim === 'idle' || builderAnim === 'locked' ? {
-                        width: '100%', maxWidth: 320, aspectRatio: '4/3',
+                        width: 320, height: 240,
                         borderRadius: 20,
-                        background: 'rgba(96,165,250,0.06)', borderWidth: 2, borderStyle: 'dashed', borderColor: 'rgba(96,165,250,0.25)',
-                        gap: 12,
+                        background: 'rgba(96,165,250,0.06)',
+                        borderWidth: 2, borderStyle: 'dashed' as const, borderColor: 'rgba(96,165,250,0.25)',
                       } : {
-                        flex: 1, alignSelf: 'stretch',
-                        maxWidth: 'none',
+                        flex: 1,
                         borderRadius: 0,
-                        background: 'transparent', borderWidth: 0,
+                        background: 'transparent',
+                        borderWidth: 0, borderStyle: 'dashed' as const, borderColor: 'transparent',
                       }),
-                      transition: builderAnim === 'expanding'
-                        ? 'flex 5000ms cubic-bezier(0.4,0,0.2,1), max-width 5000ms cubic-bezier(0.4,0,0.2,1), border-radius 5000ms cubic-bezier(0.4,0,0.2,1), background 5000ms cubic-bezier(0.4,0,0.2,1), border-color 5000ms ease'
-                        : builderAnim === 'collapsing'
-                        ? 'flex 5000ms cubic-bezier(0.4,0,0.2,1), max-width 5000ms cubic-bezier(0.4,0,0.2,1), border-radius 5000ms cubic-bezier(0.4,0,0.2,1), background 5000ms cubic-bezier(0.4,0,0.2,1), border-color 5000ms ease'
+                      gap: 12,
+                      transition: builderAnim === 'expanding' || builderAnim === 'collapsing'
+                        ? 'flex 600ms cubic-bezier(0.4,0,0.2,1), border-radius 600ms cubic-bezier(0.4,0,0.2,1), background 600ms ease, border-color 600ms ease'
                         : 'none',
                     }}
                   >
@@ -1618,6 +1614,7 @@ export function DashboardClient({
                   </div>
 
                   {/* TODO: Prototype grid goes here when prototypes exist */}
+                </div>
               </div>
             )}
           </div>
