@@ -484,7 +484,7 @@ function BuildingMessage({ step }: { step: BuildStep }) {
 
 function PreviewEmpty({ isBuilding, buildStep }: { isBuilding: boolean; buildStep: BuildStep }) {
   return (
-    <div className="flex flex-col items-center justify-center h-full text-center px-8">
+    <div className="flex flex-col items-center justify-center h-full text-center px-8" style={!isBuilding ? { background: "#f0f0f0" } : undefined}>
       {isBuilding ? (
         <>
           <div className="relative mb-5">
@@ -502,11 +502,42 @@ function PreviewEmpty({ isBuilding, buildStep }: { isBuilding: boolean; buildSte
         </>
       ) : (
         <>
-          <div className="w-16 h-16 rounded-3xl flex items-center justify-center mb-4" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-            <Monitor className="w-7 h-7" style={{ color: "rgba(255,255,255,0.2)" }} strokeWidth={1.5} />
-          </div>
-          <p className="font-body text-sm font-medium mb-1" style={{ color: "rgba(255,255,255,0.4)" }}>Your app will appear here</p>
-          <p className="font-body text-xs" style={{ color: "rgba(255,255,255,0.2)" }}>Describe what you want to build in the chat</p>
+          <style>{`
+            @keyframes anime {
+              0% {
+                width: 60px;
+                height: 60px;
+                background: #f0f0f0;
+                box-shadow: 0 0 0 #cccccc, 0 0 0 #ffffff, 10px 10px 10px #cccccc inset, -10px -10px 10px #ffffff inset;
+              }
+              25% {
+                width: 60px;
+                height: 60px;
+                background: #f8f8f8;
+                box-shadow: 10px 10px 10px #cccccc, 10px 10px 10px #ffffff, 0 0 0 #cccccc inset, 0 0 0 #ffffff inset;
+              }
+              50% {
+                width: 60px;
+                height: 240px;
+                background: #f8f8f8;
+                box-shadow: 10px 10px 10px #cccccc, 10px 10px 10px #ffffff, 0 0 0 #cccccc inset, 0 0 0 #ffffff inset;
+              }
+              100% {
+                width: 480px;
+                height: 240px;
+                background: #fafafa;
+                box-shadow: 40px 40px 40px #cccccc, 0 0 0 #ffffff, 0 0 0 #cccccc inset, 2px 2px 2px #ffffff inset;
+              }
+            }
+          `}</style>
+          <div style={{
+            borderRadius: 20,
+            width: 480,
+            height: 240,
+            background: "#fafafa",
+            boxShadow: "40px 40px 40px #cccccc, 0 0 0 #ffffff, 0 0 0 #cccccc inset, 2px 2px 2px #ffffff inset",
+            animation: "anime 3s cubic-bezier(0.16, 1, 0.3, 1) 1s infinite alternate",
+          }} />
         </>
       )}
     </div>
