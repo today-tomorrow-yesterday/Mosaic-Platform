@@ -222,8 +222,9 @@ export function StudioPanel({ apps, visible, topOffset, onMouseMove, onMouseLeav
         Expanded:   absolute inset 0, AI builder UI
         Collapsing: reverse keyframe back to idle dimensions
       */}
+      {/* Shimmer wrapper — owns position/size/expand animation + rotating border */}
       <div
-        className={`studio-create-tile${
+        className={`studio-create-shimmer${
           createState === 'expanding'  ? ' create-expanding'  :
           createState === 'expanded'   ? ' create-expanded'   :
           createState === 'collapsing' ? ' create-collapsing' : ''
@@ -237,6 +238,8 @@ export function StudioPanel({ apps, visible, topOffset, onMouseMove, onMouseLeav
         onClick={() => { if (createState === 'idle') setCreateState('expanding') }}
         onAnimationEnd={handleAnimEnd}
       >
+      {/* Inner tile — glass surface */}
+      <div className="studio-create-tile">
 
         {/* ── Idle / expanding / collapsing face ── */}
         {createState !== 'expanded' && (
@@ -368,6 +371,7 @@ export function StudioPanel({ apps, visible, topOffset, onMouseMove, onMouseLeav
             </button>
           </div>
         )}
+      </div>
       </div>
 
       {/* ── Scroll indicator ─────────────────────────────────────── */}

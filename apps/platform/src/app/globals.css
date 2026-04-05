@@ -160,34 +160,40 @@
 .studio-grid-scroll { -ms-overflow-style: none; scrollbar-width: none; }
 .studio-grid-scroll::-webkit-scrollbar { display: none; }
 
-/* Create tile — idle: absolutely centered via inline style */
-.studio-create-tile {
-  background: rgba(255, 255, 255, 0.07);
-  backdrop-filter: blur(14px) brightness(1.12) saturate(1.5);
-  -webkit-backdrop-filter: blur(14px) brightness(1.12) saturate(1.5);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+/* Create tile wrapper — owns position/size/expand animation */
+.studio-create-shimmer {
   border-radius: 20px;
-  overflow: hidden;
-  cursor: pointer;
   z-index: 10;
   animation: studioCreateBreathe 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 @keyframes studioCreateBreathe {
-  0%, 100% {
-    box-shadow: 0 0 16px rgba(96, 165, 250, 0.18), 0 0 32px rgba(96, 165, 250, 0.08);
-    border-color: rgba(255, 255, 255, 0.14);
-  }
-  50% {
-    box-shadow: 0 0 28px rgba(96, 165, 250, 0.42), 0 0 56px rgba(96, 165, 250, 0.18);
-    border-color: rgba(96, 165, 250, 0.35);
-  }
+  0%, 100% { box-shadow: 0 0 16px rgba(96, 165, 250, 0.18), 0 0 32px rgba(96, 165, 250, 0.08); }
+  50%       { box-shadow: 0 0 28px rgba(96, 165, 250, 0.42), 0 0 56px rgba(96, 165, 250, 0.18); }
+}
+
+/* Create tile — glass surface */
+.studio-create-tile {
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(14px) brightness(1.12) saturate(1.5);
+  -webkit-backdrop-filter: blur(14px) brightness(1.12) saturate(1.5);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  overflow: hidden;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
 }
 
 /* Expanding — vertical first (0→40%), then horizontal (40→100%) */
-.studio-create-tile.create-expanding {
+.studio-create-shimmer.create-expanding {
   position: absolute;
   cursor: default;
   animation: studioCreateExpand 2.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+/* Inner tile tracks wrapper border-radius during animation */
+.studio-create-shimmer.create-expanding .studio-create-tile,
+.studio-create-shimmer.create-collapsing .studio-create-tile {
+  border-radius: inherit;
 }
 @keyframes studioCreateExpand {
   0%   { top: calc(50% - 130px); left: calc(50% - 120px); width: 240px; height: 260px; border-radius: 20px; }
@@ -196,16 +202,19 @@
 }
 
 /* Fully expanded */
-.studio-create-tile.create-expanded {
+.studio-create-shimmer.create-expanded {
   position: absolute;
   top: 0; left: 0; width: 100%; height: 100%;
   border-radius: 0;
   cursor: default;
   animation: none;
 }
+.studio-create-shimmer.create-expanded .studio-create-tile {
+  border-radius: 0;
+}
 
 /* Collapsing — reverse: horizontal first, then vertical */
-.studio-create-tile.create-collapsing {
+.studio-create-shimmer.create-collapsing {
   position: absolute;
   cursor: default;
   animation: studioCreateCollapse 1.5s cubic-bezier(0.4, 0, 0.2, 1) both;
