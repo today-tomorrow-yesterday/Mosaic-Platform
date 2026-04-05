@@ -9,7 +9,6 @@ import Link from 'next/link'
 import { useUser, useClerk } from '@clerk/nextjs'
 import { GlassFilterSvg, GlassLabPanel, glassBackdropFilter, DEFAULT_GLASS } from './GlassLab'
 import type { GlassParams } from './GlassLab'
-import { StudioClient } from '../app/studio/StudioClient'
 import { FluidBackground } from './backgrounds/FluidBackground'
 import { RainBackground } from './backgrounds/RainBackground'
 import { AbstractBackground } from './backgrounds/AbstractBackground'
@@ -437,8 +436,6 @@ export function DashboardClient({
   useEffect(() => { glassParamsRef.current = glassParams }, [glassParams])
   const [labOpen, setLabOpen] = useState(false)
   const [mode, setMode] = useState<"home" | "studio" | "builder">("home")
-  const [builderAnim, setBuilderAnim] = useState<"idle" | "locked" | "expanding" | "open" | "collapsing">("idle")
-  const createCardRef = useRef<HTMLDivElement>(null)
   const userBgTypeRef = useRef(glassParams.backgroundType)  // saves user's bg choice before studio swaps to graph
 
   // Keep userBgTypeRef updated when the user changes bg via Lab (but not when studio auto-sets to graph)
@@ -726,30 +723,6 @@ export function DashboardClient({
   }, [expand?.phase]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Builder expand phase machine — mirrors the home card expand pattern:
-  // locked → expanding (rAF) → open (after duration) → collapsing → idle
-  useEffect(() => {
-    if (builderAnim === 'locked') {
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        setBuilderAnim("expanding")
-      }))
-      return
-    }
-    if (builderAnim === 'expanding') {
-      const t = setTimeout(() => {
-        setMode("builder")
-        setBuilderAnim("open")
-      }, 5000)
-      return () => clearTimeout(t)
-    }
-    if (builderAnim === 'collapsing') {
-      const t = setTimeout(() => {
-        setMode("studio")
-        setBuilderAnim("idle")
-      }, 5000)
-      return () => clearTimeout(t)
-    }
-    return undefined
-  }, [builderAnim]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const collapseCard = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
@@ -1527,94 +1500,18 @@ export function DashboardClient({
                 })}
                 </div>
 
-                {/* Studio mode — app list, slides in from top.
-                    Top padding accounts for the chrome header panels that float above.
-                    Mouse move forwarded to studioMouseRef for magnetic dot effect on the stack background. */}
-                {/* Studio mode — slides in from top */}
+                {/* Studio mode — blank canvas, build from scratch */}
                 <div
                   onMouseMove={(e) => { studioMouseRef.current = { x: e.clientX, y: e.clientY } }}
                   onMouseLeave={() => { studioMouseRef.current = { x: -1000, y: -1000 } }}
                   style={{
-                    position: 'absolute', inset: 0, overflow: 'auto',
-                    transform: mode === 'studio' ? 'translateY(0) scale(1)' : mode === 'builder' ? 'translateY(0) scale(0.95)' : 'translateY(-100%) scale(1)',
-                    opacity: mode === 'studio' || builderAnim !== 'idle' ? 1 : 0,
-                    transition: 'transform 600ms cubic-bezier(0.4, 0, 0.2, 1), opacity 400ms cubic-bezier(0.4, 0, 0.2, 1), padding 600ms cubic-bezier(0.4,0,0.2,1)',
-                    pointerEvents: mode === 'studio' || builderAnim !== 'idle' ? 'auto' : 'none',
-                    display: 'flex', flexDirection: 'column',
-                    alignItems: builderAnim === 'idle' || builderAnim === 'locked' ? 'center' : 'stretch',
-                    justifyContent: builderAnim === 'idle' || builderAnim === 'locked' ? 'center' : 'stretch',
-                    padding: builderAnim === 'idle' || builderAnim === 'locked' ? `${CHROME_HEADER_HEIGHT_PX + 12}px 16px 16px` : 0,
+                    position: 'absolute', inset: 0,
+                    transform: mode === 'studio' ? 'translateY(0)' : 'translateY(-100%)',
+                    opacity: mode === 'studio' ? 1 : 0,
+                    transition: 'transform 600ms cubic-bezier(0.4, 0, 0.2, 1), opacity 400ms cubic-bezier(0.4, 0, 0.2, 1)',
+                    pointerEvents: mode === 'studio' ? 'auto' : 'none',
                   }}
-                >
-                  {/* Create New App card — expands in place to fill the stack.
-                      Idle: small centered card. Expanding: width/height transition to 100%.
-                      StudioClient content lives inside, hidden until expanded. */}
-                  <div
-                    ref={createCardRef}
-                    onClick={() => { if (builderAnim === 'idle') setBuilderAnim("locked") }}
-                    style={{
-                      position: 'relative',
-                      overflow: 'hidden',
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                      color: '#60a5fa',
-                      cursor: builderAnim === 'idle' ? 'pointer' : 'default',
-                      // Idle/locked: small fixed-size card. Expanding/open: fills parent.
-                      ...(builderAnim === 'idle' || builderAnim === 'locked' ? {
-                        width: 320, height: 240,
-                        borderRadius: 20,
-                        background: 'rgba(96,165,250,0.06)',
-                        borderWidth: 2, borderStyle: 'dashed' as const, borderColor: 'rgba(96,165,250,0.25)',
-                      } : {
-                        flex: 1,
-                        borderRadius: 0,
-                        background: 'transparent',
-                        borderWidth: 0, borderStyle: 'dashed' as const, borderColor: 'transparent',
-                      }),
-                      gap: 12,
-                      transition: builderAnim === 'expanding' || builderAnim === 'collapsing'
-                        ? 'flex 600ms cubic-bezier(0.4,0,0.2,1), border-radius 600ms cubic-bezier(0.4,0,0.2,1), background 600ms ease, border-color 600ms ease'
-                        : 'none',
-                    }}
-                  >
-                    {/* Card face — plus icon + label, fades out as card grows */}
-                    <div style={{
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12,
-                      opacity: builderAnim === 'idle' || builderAnim === 'locked' ? 1 : 0,
-                      transition: 'opacity 800ms ease',
-                      pointerEvents: 'none',
-                      ...(builderAnim !== 'idle' && builderAnim !== 'locked' ? { position: 'absolute', inset: 0, zIndex: 1 } : {}),
-                    }}>
-                      <div style={{
-                        width: 52, height: 52, borderRadius: 16,
-                        background: 'rgba(96,165,250,0.12)', border: '1px solid rgba(96,165,250,0.2)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      }}>
-                        <Plus size={24} />
-                      </div>
-                      <div style={{ textAlign: 'center' }}>
-                        <span style={{ fontSize: 15, fontWeight: 700, display: 'block' }}>Create New App</span>
-                        <span style={{ fontSize: 11, color: 'rgba(96,165,250,0.6)', marginTop: 4, display: 'block' }}>Describe it in plain English</span>
-                      </div>
-                    </div>
-
-                    {/* Builder content — fills the card, fades in after it's grown */}
-                    {builderAnim !== 'idle' && builderAnim !== 'locked' && (
-                      <div style={{
-                        position: 'absolute', inset: 0, zIndex: 2,
-                        display: 'flex', flexDirection: 'column',
-                        overflow: 'hidden',
-                        opacity: builderAnim === 'open' ? 1 : 0,
-                        transition: 'opacity 600ms ease',
-                      }}>
-                        <StudioClient onBack={() => {
-                          setBuilderAnim("collapsing")
-                        }} />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* TODO: Prototype grid goes here when prototypes exist */}
-                </div>
+                />
               </div>
             )}
           </div>
