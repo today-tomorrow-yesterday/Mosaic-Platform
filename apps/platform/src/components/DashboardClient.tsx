@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useRef, useEffect, useCallback, useMemo, createPortal } from 'react'
 import {
   ArrowUpRight, Home, Wallet, Baby, CalendarDays,
   Hexagon, Users, X, Plus, ChevronRight, LogOut, UserRound, FlaskConical, Wand2,
@@ -439,7 +439,6 @@ export function DashboardClient({
   const [mode, setMode] = useState<"home" | "studio" | "builder">("home")
   const [builderAnim, setBuilderAnim] = useState<"idle" | "expanding" | "open" | "collapsing">("idle")
   const createCardRef = useRef<HTMLDivElement>(null)
-  const builderStartRect = useRef<DOMRect | null>(null)
   const userBgTypeRef = useRef(glassParams.backgroundType)  // saves user's bg choice before studio swaps to graph
 
   // Keep userBgTypeRef updated when the user changes bg via Lab (but not when studio auto-sets to graph)
@@ -1799,75 +1798,6 @@ export function DashboardClient({
             return p ? { id: p.id, name: p.name } : null
           }).filter((p): p is { id: string; name: string } => p !== null)}
         />
-      )}
-      {/* Builder overlay — portaled to document.body so it's outside any
-          transformed ancestors. Starts at the card's exact viewport rect,
-          expands to fill the screen. */}
-      {builderAnim !== 'idle' && builderStartRect.current && createPortal(
-        <div
-          style={{
-            position: 'fixed', zIndex: 100,
-            overflow: 'hidden',
-            display: 'flex', flexDirection: 'column',
-            background: '#0c0b18',
-            pointerEvents: builderAnim === 'open' ? 'auto' : 'none',
-            ...(builderAnim === 'expanding' ? {
-              animation: 'builderExpand 5000ms cubic-bezier(0.16, 1, 0.3, 1) both',
-            } : builderAnim === 'collapsing' ? {
-              animation: 'builderCollapse 5000ms cubic-bezier(0.4, 0, 0.2, 1) both',
-            } : {
-              top: 0, left: 0, width: '100vw', height: '100vh', borderRadius: 0,
-            }),
-          } as React.CSSProperties}
-          ref={(el) => {
-            if (el && builderStartRect.current) {
-              el.style.setProperty('--bx', `${builderStartRect.current.left}px`)
-              el.style.setProperty('--by', `${builderStartRect.current.top}px`)
-              el.style.setProperty('--bw', `${builderStartRect.current.width}px`)
-              el.style.setProperty('--bh', `${builderStartRect.current.height}px`)
-            }
-          }}
-        >
-          {/* Card face clone — visible at start, fades out during expand */}
-          <div style={{
-            position: 'absolute', inset: 0, zIndex: 1,
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12,
-            color: '#60a5fa', pointerEvents: 'none',
-            ...(builderAnim === 'expanding' ? {
-              animation: 'builderFaceOut 1500ms ease both',
-            } : builderAnim === 'collapsing' ? {
-              animation: 'builderFaceIn 1500ms ease both',
-            } : { opacity: 0 }),
-          }}>
-            <div style={{
-              width: 52, height: 52, borderRadius: 16,
-              background: 'rgba(96,165,250,0.12)', border: '1px solid rgba(96,165,250,0.2)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <Plus size={24} />
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <span style={{ fontSize: 15, fontWeight: 700, display: 'block' }}>Create New App</span>
-              <span style={{ fontSize: 11, color: 'rgba(96,165,250,0.6)', marginTop: 4, display: 'block' }}>Describe it in plain English</span>
-            </div>
-          </div>
-
-          {/* Builder content — fades in after expand reaches ~65% */}
-          <div style={{
-            position: 'absolute', inset: 0, zIndex: 2,
-            display: 'flex', flexDirection: 'column',
-            overflow: 'hidden',
-            ...(builderAnim === 'expanding' || builderAnim === 'open' ? {
-              animation: 'builderContentIn 5000ms cubic-bezier(0.22, 1, 0.36, 1) both',
-            } : { opacity: 0 }),
-          }}>
-            <StudioClient onBack={() => {
-              setBuilderAnim("collapsing")
-              setTimeout(() => { setMode("studio"); setBuilderAnim("idle") }, 5000)
-            }} />
-          </div>
-        </div>,
-        document.body
       )}
     </>
   )
