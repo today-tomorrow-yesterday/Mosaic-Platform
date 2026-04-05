@@ -437,6 +437,9 @@ export function DashboardClient({
   useEffect(() => { glassParamsRef.current = glassParams }, [glassParams])
   const [labOpen, setLabOpen] = useState(false)
   const [mode, setMode] = useState<"home" | "studio" | "builder">("home")
+  const [builderAnim, setBuilderAnim] = useState<"idle" | "expanding" | "open" | "collapsing">("idle")
+  const createCardRef = useRef<HTMLDivElement>(null)
+  const builderStartRect = useRef<DOMRect | null>(null)
   const userBgTypeRef = useRef(glassParams.backgroundType)  // saves user's bg choice before studio swaps to graph
 
   // Keep userBgTypeRef updated when the user changes bg via Lab (but not when studio auto-sets to graph)
@@ -675,7 +678,21 @@ export function DashboardClient({
     }
     const dur = calcExpandDuration(origin, activeRect.width, activeRect.height)
     setHoveredCard(null)
-    resetProximityHoverEffects()
+    // Reset siblings to resting state — but leave the expanding card alone so
+    // the expand animation isn't preceded by a visible hover-scale shrink.
+    bentoCardRefs.current.forEach((node, nodeId) => {
+      if (nodeId === id || !node) return
+      node.classList.add('settling')
+      node.style.setProperty('--prox-scale', '1')
+      node.style.setProperty('--prox-y', '0px')
+      node.style.setProperty('--prox-dim', '0')
+      node.style.setProperty('--tilt-rx', '0deg')
+      node.style.setProperty('--tilt-ry', '0deg')
+      node.style.setProperty('--mag-x', '0px')
+      node.style.setProperty('--mag-y', '0px')
+    })
+    const activeEl2 = activeViewRef.current
+    if (activeEl2) activeEl2.style.setProperty('--prox-focus', '0')
     setExpand({ id, phase: 'locked', origin, target, dur })
   }, [expand])
 
@@ -1497,7 +1514,7 @@ export function DashboardClient({
                   style={{
                     position: 'absolute', inset: 0, overflow: 'auto',
                     transform: mode === 'studio' ? 'translateY(0) scale(1)' : mode === 'builder' ? 'translateY(0) scale(0.95)' : 'translateY(-100%) scale(1)',
-                    opacity: mode === 'studio' ? 1 : 0,
+                    opacity: mode === 'studio' && builderAnim === 'idle' ? 1 : 0,
                     transition: 'transform 600ms cubic-bezier(0.4, 0, 0.2, 1), opacity 400ms cubic-bezier(0.4, 0, 0.2, 1)',
                     pointerEvents: mode === 'studio' ? 'auto' : 'none',
                     display: 'flex', flexDirection: 'column', gap: 16,
@@ -1508,16 +1525,26 @@ export function DashboardClient({
                   {/* Studio content — fills available space below chrome header */}
                   <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24, position: 'relative', zIndex: 1 }}>
 
-                    {/* Create new app — centered hero */}
-                    <button
-                      onClick={() => setMode("builder")}
-                      className="transition-all duration-200 hover:scale-[1.02] hover:border-blue-400/50 active:scale-[0.98]"
+                    {/* Create new app card — stays in flow. On click, captures its rect
+                        and spawns a fixed overlay that expands from that exact position. */}
+                    <div
+                      ref={createCardRef}
+                      onClick={() => {
+                        if (builderAnim === 'idle' && createCardRef.current) {
+                          builderStartRect.current = createCardRef.current.getBoundingClientRect()
+                          setBuilderAnim("expanding")
+                          setTimeout(() => { setMode("builder"); setBuilderAnim("open") }, 5000)
+                        }
+                      }}
                       style={{
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                         width: '100%', maxWidth: 320, aspectRatio: '4/3',
                         borderRadius: 20, cursor: 'pointer',
                         background: 'rgba(96,165,250,0.06)', border: '2px dashed rgba(96,165,250,0.25)',
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                         color: '#60a5fa', gap: 12,
+                        // Hide while the overlay is covering it
+                        opacity: builderAnim === 'idle' ? 1 : 0,
+                        transition: 'opacity 200ms ease',
                       }}
                     >
                       <div style={{
@@ -1531,35 +1558,14 @@ export function DashboardClient({
                         <span style={{ fontSize: 15, fontWeight: 700, display: 'block' }}>Create New App</span>
                         <span style={{ fontSize: 11, color: 'rgba(96,165,250,0.6)', marginTop: 4, display: 'block' }}>Describe it in plain English</span>
                       </div>
-                    </button>
+                    </div>
 
                     {/* TODO: Prototype grid goes here when prototypes exist */}
 
                   </div>
                 </div>
 
-                {/* Builder mode — full AI app builder, expands outward from center.
-                    Uses flex column with a spacer to push content below the stack chrome header. */}
-                <div
-                  style={{
-                    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-                    overflow: 'hidden',
-                    display: 'flex', flexDirection: 'column',
-                    transform: mode === 'builder' ? 'scale(1)' : 'scale(0.85)',
-                    opacity: mode === 'builder' ? 1 : 0,
-                    borderRadius: mode === 'builder' ? 0 : 24,
-                    transition: 'transform 500ms cubic-bezier(0.22, 1, 0.36, 1), opacity 350ms cubic-bezier(0.22, 1, 0.36, 1), border-radius 500ms cubic-bezier(0.22, 1, 0.36, 1)',
-                    transformOrigin: 'center center',
-                    pointerEvents: mode === 'builder' ? 'auto' : 'none',
-                  }}
-                >
-                  {/* Spacer to clear the stack chrome header */}
-                  <div style={{ flexShrink: 0, height: CHROME_HEADER_HEIGHT_PX }} />
-                  {/* StudioClient fills remaining space */}
-                  <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-                    {mode === 'builder' && <StudioClient onBack={() => setMode("studio")} />}
-                  </div>
-                </div>
+                {/* Builder is rendered as a fixed viewport overlay — see bottom of render */}
               </div>
             )}
           </div>
@@ -1574,6 +1580,54 @@ export function DashboardClient({
     <>
       <style>{`
         @keyframes gradFlow { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
+        /* Builder expand — two-phase: width first (33%), then height (67%).
+           Shadows morph from inset (pressed) to outset (elevated) to deep (landed).
+           Per animations.md panel expand rules. */
+        /* Builder expand uses CSS vars --bx, --by, --bw, --bh set from JS
+           to start at the card's exact screen position, then grow to fill viewport. */
+        @keyframes builderExpand {
+          0% {
+            top: var(--by); left: var(--bx); width: var(--bw); height: var(--bh);
+            border-radius: 20px;
+            box-shadow: inset 6px 6px 12px rgba(0,0,0,0.3), inset -4px -4px 8px rgba(96,165,250,0.1);
+          }
+          15% {
+            top: var(--by); left: var(--bx); width: var(--bw); height: var(--bh);
+            border-radius: 18px;
+            box-shadow: 8px 8px 24px rgba(96,165,250,0.15);
+          }
+          45% {
+            top: 0; left: 0; width: 100vw; height: var(--bh);
+            border-radius: 14px;
+            box-shadow: 12px 12px 32px rgba(96,165,250,0.12);
+          }
+          100% {
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            border-radius: 0px;
+            box-shadow: none;
+          }
+        }
+        @keyframes builderCollapse {
+          0%   { top: 0; left: 0; width: 100vw; height: 100vh; border-radius: 0; opacity: 1; }
+          40%  { top: 0; left: 0; width: 100vw; height: var(--bh); border-radius: 14px; opacity: 0.8; }
+          70%  { top: var(--by); left: var(--bx); width: var(--bw); height: var(--bh); border-radius: 18px; opacity: 0.4; }
+          100% { top: var(--by); left: var(--bx); width: var(--bw); height: var(--bh); border-radius: 20px; opacity: 0; }
+        }
+        @keyframes builderContentIn {
+          0%, 65% { opacity: 0; transform: translateY(8px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes builderFaceOut {
+          0% { opacity: 1; }
+          30% { opacity: 0; }
+          100% { opacity: 0; }
+        }
+        @keyframes builderFaceIn {
+          0% { opacity: 0; }
+          70% { opacity: 0; }
+          100% { opacity: 1; }
+        }
+
         @keyframes graphDrift {
           0%, 100% { transform: translate(0, 0); }
           25% { transform: translate(-8px, 5px); }
@@ -1760,6 +1814,74 @@ export function DashboardClient({
             return p ? { id: p.id, name: p.name } : null
           }).filter((p): p is { id: string; name: string } => p !== null)}
         />
+      )}
+      {/* Builder overlay — position:fixed, starts at the card's exact rect and
+          expands to fill the viewport. Card face fades out, StudioClient fades in. */}
+      {builderAnim !== 'idle' && builderStartRect.current && (
+        <div
+          style={{
+            position: 'fixed', zIndex: 100,
+            overflow: 'hidden',
+            display: 'flex', flexDirection: 'column',
+            background: '#0c0b18',
+            pointerEvents: builderAnim === 'open' ? 'auto' : 'none',
+            ...(builderAnim === 'expanding' ? {
+              animation: 'builderExpand 5000ms cubic-bezier(0.16, 1, 0.3, 1) both',
+            } : builderAnim === 'collapsing' ? {
+              animation: 'builderCollapse 5000ms cubic-bezier(0.4, 0, 0.2, 1) both',
+            } : {
+              top: 0, left: 0, width: '100vw', height: '100vh', borderRadius: 0,
+            }),
+          } as React.CSSProperties}
+          ref={(el) => {
+            // Set CSS custom properties for the keyframes to read the card's start rect
+            if (el && builderStartRect.current) {
+              el.style.setProperty('--bx', `${builderStartRect.current.left}px`)
+              el.style.setProperty('--by', `${builderStartRect.current.top}px`)
+              el.style.setProperty('--bw', `${builderStartRect.current.width}px`)
+              el.style.setProperty('--bh', `${builderStartRect.current.height}px`)
+            }
+          }}
+        >
+          {/* Card face clone — visible at start, fades out during expand */}
+          <div style={{
+            position: 'absolute', inset: 0, zIndex: 1,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12,
+            color: '#60a5fa', pointerEvents: 'none',
+            ...(builderAnim === 'expanding' ? {
+              animation: 'builderFaceOut 1500ms ease both',
+            } : builderAnim === 'collapsing' ? {
+              animation: 'builderFaceIn 1500ms ease both',
+            } : { opacity: 0 }),
+          }}>
+            <div style={{
+              width: 52, height: 52, borderRadius: 16,
+              background: 'rgba(96,165,250,0.12)', border: '1px solid rgba(96,165,250,0.2)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Plus size={24} />
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <span style={{ fontSize: 15, fontWeight: 700, display: 'block' }}>Create New App</span>
+              <span style={{ fontSize: 11, color: 'rgba(96,165,250,0.6)', marginTop: 4, display: 'block' }}>Describe it in plain English</span>
+            </div>
+          </div>
+
+          {/* Builder content — fades in after expand reaches ~65% */}
+          <div style={{
+            position: 'absolute', inset: 0, zIndex: 2,
+            display: 'flex', flexDirection: 'column',
+            overflow: 'hidden',
+            ...(builderAnim === 'expanding' || builderAnim === 'open' ? {
+              animation: 'builderContentIn 5000ms cubic-bezier(0.22, 1, 0.36, 1) both',
+            } : { opacity: 0 }),
+          }}>
+            <StudioClient onBack={() => {
+              setBuilderAnim("collapsing")
+              setTimeout(() => { setMode("studio"); setBuilderAnim("idle") }, 5000)
+            }} />
+          </div>
+        </div>
       )}
     </>
   )
