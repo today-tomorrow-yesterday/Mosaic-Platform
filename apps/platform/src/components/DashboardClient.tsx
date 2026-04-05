@@ -678,21 +678,6 @@ export function DashboardClient({
     }
     const dur = calcExpandDuration(origin, activeRect.width, activeRect.height)
     setHoveredCard(null)
-    // Reset siblings to resting state — but leave the expanding card alone so
-    // the expand animation isn't preceded by a visible hover-scale shrink.
-    bentoCardRefs.current.forEach((node, nodeId) => {
-      if (nodeId === id || !node) return
-      node.classList.add('settling')
-      node.style.setProperty('--prox-scale', '1')
-      node.style.setProperty('--prox-y', '0px')
-      node.style.setProperty('--prox-dim', '0')
-      node.style.setProperty('--tilt-rx', '0deg')
-      node.style.setProperty('--tilt-ry', '0deg')
-      node.style.setProperty('--mag-x', '0px')
-      node.style.setProperty('--mag-y', '0px')
-    })
-    const activeEl2 = activeViewRef.current
-    if (activeEl2) activeEl2.style.setProperty('--prox-focus', '0')
     setExpand({ id, phase: 'locked', origin, target, dur })
   }, [expand])
 
@@ -707,10 +692,10 @@ export function DashboardClient({
       return
     }
     if (expand.phase === 'expanding') {
-      const t = setTimeout(
-        () => setExpand(prev => prev ? { ...prev, phase: 'open' } : null),
-        expand.dur + 50,
-      )
+      const t = setTimeout(() => {
+        setExpand(prev => prev ? { ...prev, phase: 'open' } : null)
+        resetProximityHoverEffects()
+      }, expand.dur + 50)
       return () => clearTimeout(t)
     }
     if (expand.phase === 'collapsing') {
@@ -1815,9 +1800,10 @@ export function DashboardClient({
           }).filter((p): p is { id: string; name: string } => p !== null)}
         />
       )}
-      {/* Builder overlay — position:fixed, starts at the card's exact rect and
-          expands to fill the viewport. Card face fades out, StudioClient fades in. */}
-      {builderAnim !== 'idle' && builderStartRect.current && (
+      {/* Builder overlay — portaled to document.body so it's outside any
+          transformed ancestors. Starts at the card's exact viewport rect,
+          expands to fill the screen. */}
+      {builderAnim !== 'idle' && builderStartRect.current && createPortal(
         <div
           style={{
             position: 'fixed', zIndex: 100,
@@ -1834,7 +1820,6 @@ export function DashboardClient({
             }),
           } as React.CSSProperties}
           ref={(el) => {
-            // Set CSS custom properties for the keyframes to read the card's start rect
             if (el && builderStartRect.current) {
               el.style.setProperty('--bx', `${builderStartRect.current.left}px`)
               el.style.setProperty('--by', `${builderStartRect.current.top}px`)
@@ -1881,7 +1866,8 @@ export function DashboardClient({
               setTimeout(() => { setMode("studio"); setBuilderAnim("idle") }, 5000)
             }} />
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )
