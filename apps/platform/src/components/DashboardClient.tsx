@@ -677,6 +677,18 @@ export function DashboardClient({
     }
     const dur = calcExpandDuration(origin, activeRect.width, activeRect.height)
     setHoveredCard(null)
+    // Clear hover transform on the expanding card instantly (no .settling — uses default 0.13s linear).
+    // Prevents scale(1.03)/translateY persisting through the expand and causing a visible jitter when
+    // resetProximityHoverEffects fires at open phase on a full-viewport card.
+    const expandingNode = bentoCardRefs.current.get(id)
+    if (expandingNode) {
+      expandingNode.style.setProperty('--prox-scale', '1')
+      expandingNode.style.setProperty('--prox-y', '0px')
+      expandingNode.style.setProperty('--tilt-rx', '0deg')
+      expandingNode.style.setProperty('--tilt-ry', '0deg')
+      expandingNode.style.setProperty('--mag-x', '0px')
+      expandingNode.style.setProperty('--mag-y', '0px')
+    }
     setExpand({ id, phase: 'locked', origin, target, dur })
   }, [expand])
 
@@ -712,6 +724,32 @@ export function DashboardClient({
     }
     return undefined
   }, [expand?.phase]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Builder expand phase machine — mirrors the home card expand pattern:
+  // locked → expanding (rAF) → open (after duration) → collapsing → idle
+  useEffect(() => {
+    if (builderAnim === 'locked') {
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        setBuilderAnim("expanding")
+      }))
+      return
+    }
+    if (builderAnim === 'expanding') {
+      const t = setTimeout(() => {
+        setMode("builder")
+        setBuilderAnim("open")
+      }, 5000)
+      return () => clearTimeout(t)
+    }
+    if (builderAnim === 'collapsing') {
+      const t = setTimeout(() => {
+        setMode("studio")
+        setBuilderAnim("idle")
+      }, 5000)
+      return () => clearTimeout(t)
+    }
+    return undefined
+  }, [builderAnim]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const collapseCard = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
@@ -1499,95 +1537,56 @@ export function DashboardClient({
                   style={{
                     position: 'absolute', inset: 0, overflow: 'auto',
                     transform: mode === 'studio' ? 'translateY(0) scale(1)' : mode === 'builder' ? 'translateY(0) scale(0.95)' : 'translateY(-100%) scale(1)',
-                    opacity: mode === 'studio' && builderAnim === 'idle' ? 1 : 0,
-                    transition: 'transform 600ms cubic-bezier(0.4, 0, 0.2, 1), opacity 400ms cubic-bezier(0.4, 0, 0.2, 1)',
-                    pointerEvents: mode === 'studio' && builderAnim === 'idle' ? 'auto' : 'none',
-                    display: 'flex', flexDirection: 'column', gap: 16,
-                    paddingTop: CHROME_HEADER_HEIGHT_PX + 12,
-                    paddingLeft: 16, paddingRight: 16, paddingBottom: 16,
+                    opacity: mode === 'studio' || builderAnim !== 'idle' ? 1 : 0,
+                    transition: 'transform 600ms cubic-bezier(0.4, 0, 0.2, 1), opacity 400ms cubic-bezier(0.4, 0, 0.2, 1), padding 5000ms cubic-bezier(0.4,0,0.2,1)',
+                    pointerEvents: mode === 'studio' || builderAnim !== 'idle' ? 'auto' : 'none',
+                    display: 'flex', flexDirection: 'column',
+                    gap: builderAnim === 'idle' || builderAnim === 'locked' ? 16 : 0,
+                    paddingTop: builderAnim === 'idle' || builderAnim === 'locked' ? CHROME_HEADER_HEIGHT_PX + 12 : 0,
+                    paddingLeft: builderAnim === 'idle' || builderAnim === 'locked' ? 16 : 0,
+                    paddingRight: builderAnim === 'idle' || builderAnim === 'locked' ? 16 : 0,
+                    paddingBottom: builderAnim === 'idle' || builderAnim === 'locked' ? 16 : 0,
                   }}
                 >
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24, position: 'relative', zIndex: 1 }}>
-                    {/* Static Create card — just triggers the expand */}
-                    <div
-                      ref={createCardRef}
-                      onClick={() => {
-                        if (builderAnim === 'idle') {
-                          setBuilderAnim("locked")
-                        }
-                      }}
-                      style={{
-                        width: '100%', maxWidth: 320, aspectRatio: '4/3',
-                        borderRadius: 20, cursor: 'pointer',
-                        background: 'rgba(96,165,250,0.06)', border: '2px dashed rgba(96,165,250,0.25)',
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                        color: '#60a5fa', gap: 12,
-                      }}
-                    >
-                      <div style={{
-                        width: 52, height: 52, borderRadius: 16,
-                        background: 'rgba(96,165,250,0.12)', border: '1px solid rgba(96,165,250,0.2)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      }}>
-                        <Plus size={24} />
-                      </div>
-                      <div style={{ textAlign: 'center' }}>
-                        <span style={{ fontSize: 15, fontWeight: 700, display: 'block' }}>Create New App</span>
-                        <span style={{ fontSize: 11, color: 'rgba(96,165,250,0.6)', marginTop: 4, display: 'block' }}>Describe it in plain English</span>
-                      </div>
-                    </div>
-                    {/* TODO: Prototype grid goes here when prototypes exist */}
-                  </div>
-                </div>
-
-                {/* Builder — absolute inside the content area, same as home cards.
-                    Transitions from the create card's size to fill the entire parent (inset:0).
-                    Uses CSS transition on top/left/width/height just like expandCard does. */}
-                {builderAnim !== 'idle' && (
+                  {/* Create New App card — the card itself expands in place.
+                      Idle: small centered card. Expanding: grows to fill parent via flex.
+                      StudioClient content lives inside, hidden until expanded. */}
                   <div
-                    ref={(el) => {
-                      if (!el || !createCardRef.current) return
-                      // On first mount (expanding), measure the create card's position
-                      // relative to the content area parent and set as CSS vars for the origin.
-                      const parent = el.parentElement
-                      if (!parent) return
-                      const parentRect = parent.getBoundingClientRect()
-                      const cardRect = createCardRef.current.getBoundingClientRect()
-                      el.style.setProperty('--bo-top', `${cardRect.top - parentRect.top}px`)
-                      el.style.setProperty('--bo-left', `${cardRect.left - parentRect.left}px`)
-                      el.style.setProperty('--bo-w', `${cardRect.width}px`)
-                      el.style.setProperty('--bo-h', `${cardRect.height}px`)
-                    }}
+                    ref={createCardRef}
+                    onClick={() => { if (builderAnim === 'idle') setBuilderAnim("locked") }}
                     style={{
-                      position: 'absolute',
+                      position: 'relative',
                       overflow: 'hidden',
-                      background: '#0c0b18',
-                      display: 'flex', flexDirection: 'column',
-                      zIndex: 50,
-                      pointerEvents: builderAnim === 'open' ? 'auto' : 'none',
-                      // Expanding/collapsing: transition between origin and full size
-                      ...(builderAnim === 'expanding' || builderAnim === 'open' ? {
-                        top: 0, left: 0, width: '100%', height: '100%', borderRadius: 0,
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      color: '#60a5fa',
+                      cursor: builderAnim === 'idle' ? 'pointer' : 'default',
+                      // Idle: fixed-size centered card
+                      // Expanding/open: fills parent via flex + alignSelf stretch
+                      ...(builderAnim === 'idle' || builderAnim === 'locked' ? {
+                        width: '100%', maxWidth: 320, aspectRatio: '4/3',
+                        borderRadius: 20,
+                        background: 'rgba(96,165,250,0.06)', borderWidth: 2, borderStyle: 'dashed', borderColor: 'rgba(96,165,250,0.25)',
+                        gap: 12,
                       } : {
-                        // collapsing — back to origin
-                        top: 'var(--bo-top)', left: 'var(--bo-left)',
-                        width: 'var(--bo-w)', height: 'var(--bo-h)',
-                        borderRadius: 20, opacity: 0,
+                        flex: 1, alignSelf: 'stretch',
+                        maxWidth: 'none',
+                        borderRadius: 0,
+                        background: 'transparent', borderWidth: 0,
                       }),
                       transition: builderAnim === 'expanding'
-                        ? 'top 5000ms cubic-bezier(0.4,0,0.2,1), left 5000ms cubic-bezier(0.4,0,0.2,1), width 5000ms cubic-bezier(0.4,0,0.2,1), height 5000ms cubic-bezier(0.4,0,0.2,1), border-radius 5000ms cubic-bezier(0.4,0,0.2,1)'
+                        ? 'flex 5000ms cubic-bezier(0.4,0,0.2,1), max-width 5000ms cubic-bezier(0.4,0,0.2,1), border-radius 5000ms cubic-bezier(0.4,0,0.2,1), background 5000ms cubic-bezier(0.4,0,0.2,1), border-color 5000ms ease'
                         : builderAnim === 'collapsing'
-                        ? 'top 5000ms cubic-bezier(0.4,0,0.2,1), left 5000ms cubic-bezier(0.4,0,0.2,1), width 5000ms cubic-bezier(0.4,0,0.2,1), height 5000ms cubic-bezier(0.4,0,0.2,1), border-radius 5000ms cubic-bezier(0.4,0,0.2,1), opacity 5000ms ease'
+                        ? 'flex 5000ms cubic-bezier(0.4,0,0.2,1), max-width 5000ms cubic-bezier(0.4,0,0.2,1), border-radius 5000ms cubic-bezier(0.4,0,0.2,1), background 5000ms cubic-bezier(0.4,0,0.2,1), border-color 5000ms ease'
                         : 'none',
                     }}
                   >
-                    {/* Card face — fades out as builder expands */}
+                    {/* Card face — plus icon + label, fades out as card grows */}
                     <div style={{
-                      position: 'absolute', inset: 0, zIndex: 1,
                       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12,
-                      color: '#60a5fa', pointerEvents: 'none',
-                      opacity: builderAnim === 'expanding' || builderAnim === 'open' ? 0 : 1,
+                      opacity: builderAnim === 'idle' || builderAnim === 'locked' ? 1 : 0,
                       transition: 'opacity 800ms ease',
+                      pointerEvents: 'none',
+                      ...(builderAnim !== 'idle' && builderAnim !== 'locked' ? { position: 'absolute', inset: 0, zIndex: 1 } : {}),
                     }}>
                       <div style={{
                         width: 52, height: 52, borderRadius: 16,
@@ -1602,21 +1601,23 @@ export function DashboardClient({
                       </div>
                     </div>
 
-                    {/* Builder content — fades in after expand */}
-                    <div style={{
-                      position: 'absolute', inset: 0, zIndex: 2,
-                      display: 'flex', flexDirection: 'column',
-                      overflow: 'hidden',
-                      opacity: builderAnim === 'open' ? 1 : 0,
-                      transition: 'opacity 600ms ease',
-                    }}>
-                      <StudioClient onBack={() => {
-                        setBuilderAnim("collapsing")
-                        setTimeout(() => { setMode("studio"); setBuilderAnim("idle") }, 5000)
-                      }} />
-                    </div>
+                    {/* Builder content — fills the card, fades in after it's grown */}
+                    {builderAnim !== 'idle' && builderAnim !== 'locked' && (
+                      <div style={{
+                        position: 'absolute', inset: 0, zIndex: 2,
+                        display: 'flex', flexDirection: 'column',
+                        overflow: 'hidden',
+                        opacity: builderAnim === 'open' ? 1 : 0,
+                        transition: 'opacity 600ms ease',
+                      }}>
+                        <StudioClient onBack={() => {
+                          setBuilderAnim("collapsing")
+                        }} />
+                      </div>
+                    )}
                   </div>
-                )}
+
+                  {/* TODO: Prototype grid goes here when prototypes exist */}
               </div>
             )}
           </div>
