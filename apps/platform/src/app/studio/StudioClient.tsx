@@ -484,7 +484,7 @@ function BuildingMessage({ step }: { step: BuildStep }) {
 
 function PreviewEmpty({ isBuilding, buildStep }: { isBuilding: boolean; buildStep: BuildStep }) {
   return (
-    <div className="flex flex-col items-center justify-center h-full text-center px-8" style={!isBuilding ? { background: "#f0f0f0" } : undefined}>
+    <div className="flex flex-col items-center justify-center h-full text-center px-8">
       {isBuilding ? (
         <>
           <div className="relative mb-5">
@@ -501,7 +501,13 @@ function PreviewEmpty({ isBuilding, buildStep }: { isBuilding: boolean; buildSte
           )}
         </>
       ) : (
-        <div className="studio-empty-box" />
+        <>
+          <div className="w-16 h-16 rounded-3xl flex items-center justify-center mb-4" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+            <Monitor className="w-7 h-7" style={{ color: "rgba(255,255,255,0.2)" }} strokeWidth={1.5} />
+          </div>
+          <p className="font-body text-sm font-medium mb-1" style={{ color: "rgba(255,255,255,0.4)" }}>Your app will appear here</p>
+          <p className="font-body text-xs" style={{ color: "rgba(255,255,255,0.2)" }}>Describe what you want to build in the chat</p>
+        </>
       )}
     </div>
   )
