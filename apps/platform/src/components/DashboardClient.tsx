@@ -8,6 +8,7 @@ import {
 import Link from 'next/link'
 import { useUser, useClerk } from '@clerk/nextjs'
 import { GlassFilterSvg, GlassLabPanel, glassBackdropFilter, DEFAULT_GLASS } from './GlassLab'
+import { StudioPanel } from './StudioPanel'
 import type { GlassParams } from './GlassLab'
 import { FluidBackground } from './backgrounds/FluidBackground'
 import { RainBackground } from './backgrounds/RainBackground'
@@ -1500,21 +1501,20 @@ export function DashboardClient({
                 })}
                 </div>
 
-                {/* Studio mode — blank canvas, build from scratch */}
-                <div
-                  onMouseMove={(e) => { studioMouseRef.current = { x: e.clientX, y: e.clientY } }}
-                  onMouseLeave={() => { studioMouseRef.current = { x: -1000, y: -1000 } }}
-                  style={{
-                    position: 'absolute', inset: 0,
-                    transform: mode === 'studio' ? 'translateY(0)' : 'translateY(-100%)',
-                    opacity: mode === 'studio' ? 1 : 0,
-                    transition: 'transform 600ms cubic-bezier(0.4, 0, 0.2, 1), opacity 400ms cubic-bezier(0.4, 0, 0.2, 1)',
-                    pointerEvents: mode === 'studio' ? 'auto' : 'none',
-                  }}
-                />
               </div>
             )}
           </div>
+
+          {/* Studio mode — direct child of active view div (no padding inheritance) */}
+          {isFrontCard && (
+            <StudioPanel
+              apps={BENTO_CARDS}
+              visible={mode === 'studio'}
+              topOffset={CHROME_HEADER_HEIGHT_PX}
+              onMouseMove={(e) => { studioMouseRef.current = { x: e.clientX, y: e.clientY } }}
+              onMouseLeave={() => { studioMouseRef.current = { x: -1000, y: -1000 } }}
+            />
+          )}
         </div>
       </div>
     )
