@@ -725,14 +725,27 @@ export function DashboardClient({
     return undefined
   }, [expand?.phase]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Builder — just let the animation play for now. We'll wire phases later.
+  // Builder expand phase machine — mirrors the home card expand pattern:
+  // locked → expanding (rAF) → open (after duration) → collapsing → idle
   useEffect(() => {
+    if (builderAnim === 'locked') {
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        setBuilderAnim("expanding")
+      }))
+      return
+    }
     if (builderAnim === 'expanding') {
-      // Animation is 3s, let it finish then go to open
       const t = setTimeout(() => {
         setMode("builder")
         setBuilderAnim("open")
-      }, 3000)
+      }, 5000)
+      return () => clearTimeout(t)
+    }
+    if (builderAnim === 'collapsing') {
+      const t = setTimeout(() => {
+        setMode("studio")
+        setBuilderAnim("idle")
+      }, 5000)
       return () => clearTimeout(t)
     }
     return undefined
@@ -1062,6 +1075,549 @@ export function DashboardClient({
             transition: 'opacity 300ms',
           }}
         >
+          {/* Top-left chrome — ⚠️ LOCKED: top:-1/left:-1 fixes anti-aliasing seam at card border-radius */}
+          <div
+            className={swipeOutFadeClass}
+            style={{
+              position: 'absolute', top: -1, left: -1, backgroundColor: CHROME_BG, borderBottomRightRadius: 28,
+              zIndex: 40, paddingLeft: 6, paddingBottom: 5,
+              transform: chromeTransform, opacity: chromeOpacityVal, transition: chromeTransition,
+              pointerEvents: isExpanding ? 'none' : 'auto',
+              ...swipeOutDelayStyle,
+            }}
+          >
+            <SvgCorner position={{ top: 0, right: -28 }} rotation={0} />
+            <SvgCorner position={{ bottom: -28, left: 0 }} rotation={0} />
+            <div style={{ paddingTop: 24, paddingLeft: 32, paddingRight: 32, paddingBottom: 16, display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div className="group/logo flex items-center gap-2 cursor-pointer" onClick={resetStackToPrimary}>
+                <Hexagon size={22} color="#34d399" fill="rgba(52,211,153,0.2)" className="transition-transform duration-500 group-hover/logo:rotate-12" />
+                <span style={{ fontWeight: 700, fontSize: 17, color: 'white' }}>Mosaic</span>
+              </div>
+              {containerW > 500 && (
+                <>
+                  <div style={{ width: 1, height: 20, backgroundColor: 'rgba(255,255,255,0.1)' }} />
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setMode("home"); setGlassParams(p => ({ ...p, backgroundType: userBgTypeRef.current })) }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 9999,
+                      backgroundColor: mode === "home" ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)',
+                      border: `1px solid ${mode === "home" ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.05)'}`,
+                      color: mode === "home" ? 'white' : '#d1d5db',
+                      fontSize: 13, fontWeight: 500, cursor: 'pointer',
+                    }}
+                    className="hover:bg-white/10 hover:text-white transition-colors duration-200"
+                  >
+                    <Home size={15} /> Home
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (mode === 'home') userBgTypeRef.current = glassParams.backgroundType
+                      setMode("studio")
+                      setGlassParams(p => ({ ...p, backgroundType: "graph" }))
+                    }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 9999,
+                      backgroundColor: mode !== "home" ? 'rgba(96,165,250,0.15)' : 'rgba(255,255,255,0.05)',
+                      border: `1px solid ${mode !== "home" ? 'rgba(96,165,250,0.3)' : 'rgba(255,255,255,0.05)'}`,
+                      color: mode !== "home" ? '#93c5fd' : '#d1d5db',
+                      fontSize: 13, fontWeight: 500, cursor: 'pointer',
+                    }}
+                    className="hover:bg-white/10 hover:text-white transition-colors duration-200"
+                  >
+                    <Wand2 size={15} /> Studio
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Top-right chrome — ⚠️ LOCKED: top:-1/right:-1 fixes anti-aliasing seam at card border-radius */}
+          <div
+            className={swipeOutFadeClass}
+            style={{
+              position: 'absolute', top: -1, right: -1, backgroundColor: CHROME_BG, borderBottomLeftRadius: 28,
+              zIndex: 40, paddingRight: 6, paddingBottom: 5,
+              transform: chromeTransform, opacity: chromeOpacityVal, transition: chromeTransition,
+              pointerEvents: isExpanding ? 'none' : 'auto',
+              ...swipeOutDelayStyle,
+            }}
+          >
+            <SvgCorner position={{ top: 0, left: -28 }} rotation={90} />
+            <SvgCorner position={{ bottom: -28, right: 0 }} rotation={90} size={28} />
+            <div style={{ paddingTop: 24, paddingRight: 32, paddingLeft: 24, paddingBottom: 16, display: 'flex', alignItems: 'center', gap: 16 }}>
+              <span style={{ fontSize: 11, color: '#9ca3af', fontWeight: 500, letterSpacing: '0.05em' }}>{dateStr}</span>
+              {profile.id === 'primary'
+                ? <AvatarDropdown {...(profile.avatar ? { avatarUrl: profile.avatar } : {})} />
+                : profile.avatar
+                  ? <img src={profile.avatar} style={{ width: 38, height: 38, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.1)', objectFit: 'cover' }} alt={profile.name} /> // eslint-disable-line @next/next/no-img-element
+                  : profile.icon && <profile.icon size={18} color="white" />
+              }
+            </div>
+          </div>
+
+          {/* Main content area */}
+          <div style={{
+            position: 'relative', height: '100%', width: '100%',
+            padding: Math.min(56, Math.max(24, containerW * 0.04)),
+            display: 'flex', flexDirection: 'column',
+          }}>
+            {/* Greeting + name — hidden in studio/builder mode */}
+            <div
+              className={swipeOutFadeClass}
+              style={{
+                marginTop: mode === 'home' ? 80 : 0,
+                marginBottom: mode === 'home' ? 28 : 0,
+                maxHeight: mode === 'home' ? 300 : 0,
+                overflow: 'hidden',
+                transform: greetingTransform,
+                opacity: mode === 'home' ? greetingOpacityVal : 0,
+                transition: `${greetingTransition}, max-height 720ms cubic-bezier(0.25, 0.46, 0.45, 0.94), margin 720ms cubic-bezier(0.25, 0.46, 0.45, 0.94)`,
+                ...swipeOutDelayStyle,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.2em', color: '#9ca3af', marginBottom: 18 }}>
+                <div style={{ width: 40, height: 2, backgroundColor: profile.greetingColor, borderRadius: 9999, opacity: 0.8 }} />
+                {greeting}
+              </div>
+              <h1
+                key={`name-${profile.id}-${String(isActiveView && !isClone)}`}
+                style={{ fontSize: Math.min(68, Math.max(36, containerW * 0.065)), fontFamily: 'Georgia, "Times New Roman", serif', color: 'white', lineHeight: 1, marginBottom: 10 }}
+              >
+                {isActiveView && !isClone ? (
+                  <>
+                    {profile.name.split('').map((char, i) => (
+                      <span key={i} className="spell-char" style={{ animationDelay: `${i * 0.05 + 0.15}s` }}>
+                        {char === ' ' ? '\u00A0' : char}
+                      </span>
+                    ))}
+                    <span className="spell-char" style={{ color: profile.greetingColor, animationDelay: `${profile.name.length * 0.05 + 0.15}s` }}>.</span>
+                  </>
+                ) : (
+                  <>{profile.name}<span style={{ color: profile.greetingColor }}>.</span></>
+                )}
+              </h1>
+              <p style={{ fontSize: Math.min(17, Math.max(13, containerW * 0.014)), color: '#d1d5db', fontWeight: 300, letterSpacing: '0.05em' }}>
+                Your world, at a glance.
+              </p>
+            </div>
+
+            {/* Content area — slides vertically between Home (bento grid) and Studio */}
+            {!isClone && (
+              <div style={{ flex: 1, position: 'relative', minHeight: 280, overflow: (expand || mode === 'home') ? 'visible' : 'hidden' }}>
+                {/* Home mode — bento grid */}
+                <div
+                  ref={isFrontCard ? bentoGridRef : undefined}
+                  style={{
+                    position: 'absolute', inset: 0,
+                    overflow: 'visible', perspective: 1000,
+                    transform: mode === 'home' ? 'translateY(0)' : 'translateY(100%)',
+                    opacity: mode === 'home' ? 1 : 0,
+                    transition: expand ? 'none' : 'transform 600ms cubic-bezier(0.4, 0, 0.2, 1), opacity 400ms cubic-bezier(0.4, 0, 0.2, 1)',
+                    pointerEvents: mode === 'home' ? 'auto' : 'none',
+                  }}
+                >
+                {/* Invisible probes track original card positions for collapse animation */}
+                {isFrontCard && BENTO_CARDS.map(card => (
+                  <div
+                    key={`probe-${card.id}`}
+                    ref={el => { probeRefs.current[card.id] = el }}
+                    style={{ position: 'absolute', ...card.pos, visibility: 'hidden', pointerEvents: 'none', zIndex: -1 }}
+                  />
+                ))}
+
+                {BENTO_CARDS.map((card, cardIdx) => {
+                  const IconComp = card.icon
+                  const isThis = expand?.id === card.id
+                  const isExpandingPhase = isThis && expand?.phase === 'expanding'
+                  const isOpenPhase = isThis && expand?.phase === 'open'
+                  const isCollapsingPhase = isThis && expand?.phase === 'collapsing'
+                  const isMounted = !!isThis && !!expand
+
+                  let posStyle: React.CSSProperties = { ...card.pos }
+                  let transitionStr = 'none'
+                  let borderRad = 32
+                  let zIdx = 1
+
+                  if (isMounted && expand) {
+                    zIdx = 50
+                    if (expand.phase === 'locked') {
+                      posStyle = { top: expand.origin.top, left: expand.origin.left, width: expand.origin.width, height: expand.origin.height }
+                    } else if (isExpandingPhase || isOpenPhase) {
+                      posStyle = { top: expand.target.top, left: expand.target.left, width: expand.target.width, height: expand.target.height }
+                      borderRad = 0
+                      if (isExpandingPhase) {
+                        transitionStr = `top ${expand.dur}ms cubic-bezier(0.4,0,0.2,1), left ${expand.dur}ms cubic-bezier(0.4,0,0.2,1), width ${expand.dur}ms cubic-bezier(0.4,0,0.2,1), height ${expand.dur}ms cubic-bezier(0.4,0,0.2,1), border-radius ${expand.dur}ms cubic-bezier(0.4,0,0.2,1)`
+                      }
+                    } else if (isCollapsingPhase) {
+                      posStyle = { top: expand.origin.top, left: expand.origin.left, width: expand.origin.width, height: expand.origin.height }
+                      borderRad = 32
+                      transitionStr = `top ${expand.dur}ms cubic-bezier(0.4,0,0.2,1), left ${expand.dur}ms cubic-bezier(0.4,0,0.2,1), width ${expand.dur}ms cubic-bezier(0.4,0,0.2,1), height ${expand.dur}ms cubic-bezier(0.4,0,0.2,1), border-radius ${expand.dur}ms cubic-bezier(0.4,0,0.2,1)`
+                    } else if (expand.phase === 'settling') {
+                      // Keep the same pixel coords the collapse animation ended on so there's
+                      // no coordinate-system swap (px → %) before expand is nulled next rAF.
+                      posStyle = { top: expand.origin.top, left: expand.origin.left, width: expand.origin.width, height: expand.origin.height }
+                    }
+                  }
+
+                  const isHovered = hoveredCard === card.id && !expand
+
+                  return (
+                    <div
+                      key={card.id}
+                      ref={(el) => {
+                        if (isFrontCard) {
+                          if (el) bentoCardRefs.current.set(card.id, el)
+                          else bentoCardRefs.current.delete(card.id)
+                        }
+                      }}
+                      className="bento-prox-container"
+                      style={{
+                        position: 'absolute',
+                        ...posStyle,
+                        zIndex: zIdx,
+                        transition: transitionStr,
+                      }}
+                    >
+                    <div
+                      ref={isFrontCard ? (el => { cardRefs.current[card.id] = el }) : undefined}
+                      className={glassParams.ambientFloat && !expand ? 'ambient-float-active' : undefined}
+                      onClick={() => { if (!expand) expandCard(card.id) }}
+                      onMouseEnter={() => { if (!expand) setHoveredCard(card.id) }}
+                      onMouseLeave={() => setHoveredCard(null)}
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        borderRadius: borderRad,
+                        overflow: 'hidden',
+                        display: 'flex', flexDirection: 'column',
+                        cursor: isThis ? 'default' : 'pointer',
+                        ...(glassParams.ambientFloat ? { '--float-speed': `${glassParams.floatSpeed}s`, animationDelay: `${cardIdx * -0.8}s` } as React.CSSProperties : {}),
+                        background: `linear-gradient(145deg, ${card.glassTint} 0%, rgba(8,6,20,0.18) 100%)`,
+                        boxShadow: '0 20px 60px rgba(0,0,0,0.6), 0 4px 16px rgba(0,0,0,0.35)',
+                        transition: `border-radius ${expand?.dur ?? 300}ms cubic-bezier(0.4,0,0.2,1)`,
+                        backfaceVisibility: 'hidden',
+                      }}
+                    >
+                      {/* ── Background image (selected via Lab) — sits behind glass so refraction is visible ── */}
+                      {glassParams.bgImage && (
+                        <div style={{
+                          position: 'absolute', inset: -15, zIndex: -1, borderRadius: 'inherit', overflow: 'hidden',
+                          pointerEvents: 'none',
+                        }}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            className={glassParams.bgMotion ? 'glass-lab-drift' : undefined}
+                            src={glassParams.bgImage.url}
+                            alt=""
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: glassParams.bgImage.position, display: 'block', ...(glassParams.bgMotion ? { animationDuration: `${glassParams.bgMotionSpeed}s` } : {}) }}
+                          />
+                        </div>
+                      )}
+
+                      {/* ── Glass engine filter (swappable via Lab) ── */}
+                      <GlassFilterSvg cardId={card.id} params={glassParams} />
+
+                      {/* ── Glass backdrop — routes through the active engine filter ── */}
+                      <div style={{
+                        position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none', borderRadius: 'inherit',
+                        backdropFilter: isMounted ? 'none' : glassBackdropFilter(card.id, glassParams),
+                        WebkitBackdropFilter: isMounted ? 'none' : glassBackdropFilter(card.id, glassParams),
+                      }} />
+
+                      {/* ── Glass surface tint ── */}
+                      {glassParams.opacity > 0 && (
+                        <div style={{
+                          position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none', borderRadius: 'inherit',
+                          backgroundColor: glassParams.tint === 'light'
+                            ? `rgba(255,255,255,${glassParams.opacity})`
+                            : `rgba(0,10,30,${glassParams.opacity})`,
+                        }} />
+                      )}
+
+                      {/* ── Glass edge: gradient border (mask trick) — cheap, always on ── */}
+                      <div className="bento-glass-edge" style={{
+                        position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none',
+                        padding: '1px', borderRadius: 'inherit',
+                      }} />
+
+                      {/* ── Specular: top-left highlight — cheap, always on ── */}
+                      <div style={{
+                        position: 'absolute', top: 0, left: 0, right: 0, height: '60%',
+                        zIndex: 2, pointerEvents: 'none', borderRadius: 'inherit',
+                        background: 'linear-gradient(155deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.05) 35%, transparent 65%)',
+                        opacity: isHovered ? 1 : 0.7,
+                        transition: 'opacity 400ms ease',
+                      }} />
+
+                      {/* ── Shimmer: paused during expansion to avoid extra composite layers ── */}
+                      <div style={{
+                        position: 'absolute', top: '-100%', left: '-75%',
+                        width: '50%', height: '300%',
+                        zIndex: 3, pointerEvents: 'none',
+                        background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.06) 50%, transparent 100%)',
+                        animation: `glassShimmerSweep 9s ease-in-out ${cardIdx * 2.2}s infinite`,
+                        animationPlayState: isMounted ? 'paused' : 'running',
+                      }} />
+
+                      {/* Sibling dim overlay — driven by proximity engine's --prox-dim variable.
+                         Dims gradually as the mouse approaches a neighbor card, not on hover enter. */}
+                      <div className="bento-prox-dim" />
+
+                      {/* Dark overlay when expanding */}
+                      {isMounted && expand && (
+                        <div style={{
+                          position: 'absolute', inset: 0, zIndex: 5,
+                          background: 'linear-gradient(to bottom right, #0d151f, #070a0d)',
+                          opacity: isOpenPhase ? 0.98 : 0,
+                          animation: isExpandingPhase
+                            ? `bgFadeIn ${expand.dur}ms ease forwards`
+                            : isCollapsingPhase
+                              ? `bgFadeOut ${expand.dur}ms ease forwards`
+                              : 'none',
+                          pointerEvents: 'none',
+                        }} />
+                      )}
+
+                      {/* Collapsed card face */}
+                      <div style={isMounted && expand ? {
+                        position: 'absolute', top: 0, left: 0,
+                        width: expand.origin.width, height: expand.origin.height,
+                        zIndex: 6, pointerEvents: 'none',
+                        opacity: isOpenPhase ? 0 : 1,
+                        animation: isExpandingPhase
+                          ? `collapsedFadeOut ${expand.dur}ms ease forwards`
+                          : isCollapsingPhase
+                            ? `collapsedFadeIn ${expand.dur}ms ease forwards`
+                            : 'none',
+                      } : { position: 'absolute', inset: 0, zIndex: 6, opacity: 1 }}>
+                        <div style={{
+                          position: 'absolute', inset: 0, zIndex: 6,
+                          transform: isHovered ? 'scale(1.1) translate(-3px, -3px)' : 'scale(1) translate(0, 0)',
+                          transition: `transform ${STACK_TRANSITION_MS}ms ${EASE_SMOOTH}`,
+                        }}>{card.illus()}</div>
+                        <div style={{
+                          position: 'absolute', inset: 0, zIndex: 10,
+                          padding: Math.min(24, Math.max(14, containerW * 0.02)),
+                          display: 'flex', flexDirection: 'column',
+                          pointerEvents: isMounted ? 'none' : 'auto',
+                        }}>
+                          <div style={{
+                            width: 42, height: 42, borderRadius: 13, backgroundColor: card.bgColor,
+                            border: `1px solid ${card.borderColor}`,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            marginBottom: 'auto',
+                            transform: isHovered ? 'scale(1.08)' : 'scale(1)',
+                            transition: `transform ${STACK_TRANSITION_MS}ms ${EASE_SMOOTH}`,
+                          }}>
+                            <IconComp size={17} color={card.iconColor} />
+                          </div>
+                          <div style={{ marginTop: 'auto' }}>
+                            <h4 style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', color: 'rgba(255,255,255,0.35)', marginBottom: 5 }}>
+                              {card.label}
+                            </h4>
+                            <h2 style={{ fontSize: Math.min(26, Math.max(16, containerW * 0.022)), fontFamily: 'Georgia, "Times New Roman", serif', color: 'white', marginBottom: 8, lineHeight: 1 }}>
+                              {card.label}
+                            </h2>
+                            <div style={{
+                              width: 34, height: 34, borderRadius: '50%',
+                              border: '1px solid rgba(255,255,255,0.1)',
+                              backgroundColor: 'rgba(255,255,255,0.05)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              transform: isHovered ? 'translate(3px, -3px)' : 'translate(0px, 0px)',
+                              transition: `transform ${STACK_TRANSITION_MS}ms ${EASE_SMOOTH}`,
+                            }}>
+                              <ArrowUpRight size={13} color="white" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* ── Expanded card content ── */}
+                      {isMounted && expand && (
+                        <div
+                          style={{
+                            position: 'absolute', top: 0, left: 0,
+                            width: expand.target.width, height: expand.target.height,
+                            display: 'flex', flexDirection: 'column', zIndex: 15,
+                            padding: 'clamp(24px, 4vw, 48px)',
+                            opacity: isOpenPhase ? 1 : 0,
+                            pointerEvents: isOpenPhase ? 'auto' : 'none',
+                            animation: isExpandingPhase
+                              ? `contentFadeIn ${expand.dur}ms cubic-bezier(0.4, 0, 0.2, 1) forwards`
+                              : isCollapsingPhase
+                                ? `contentFadeOut ${expand.dur}ms cubic-bezier(0.4, 0, 0.2, 1) forwards`
+                                : 'none',
+                          }}
+                          className="overflow-hidden"
+                        >
+                          {/* Action buttons */}
+                          <div className="absolute top-6 right-6 z-[110] flex items-center gap-3">
+                            <a
+                              href={card.href}
+                              onClick={e => e.stopPropagation()}
+                              className="h-11 px-5 rounded-full bg-white/10 hover:bg-white text-white hover:text-black flex items-center justify-center gap-2 transition-colors duration-300 text-sm font-medium no-underline"
+                            >
+                              Open <ArrowUpRight className="w-4 h-4" />
+                            </a>
+                            <button
+                              onClick={collapseCard}
+                              className="w-11 h-11 rounded-full bg-white/10 hover:bg-white text-white hover:text-black flex items-center justify-center transition-colors duration-300 shadow-2xl group/close"
+                            >
+                              <X className="w-5 h-5 group-hover/close:rotate-90 transition-transform duration-300" />
+                            </button>
+                          </div>
+
+                          <div className="w-full h-full mx-auto flex flex-col pt-2">
+                            {/* Card header */}
+                            <div className="flex items-center gap-6 mb-8 shrink-0">
+                              <div
+                                style={{ width: 64, height: 64, borderRadius: 20, backgroundColor: card.bgColor, border: `1px solid ${card.borderColor}` }}
+                                className="flex items-center justify-center flex-shrink-0"
+                              >
+                                <IconComp size={32} color={card.iconColor} />
+                              </div>
+                              <div>
+                                <h1 className="text-4xl md:text-5xl font-serif text-white leading-none mb-2">{card.label}</h1>
+                                <p className="text-gray-400 text-sm md:text-base font-light tracking-wide">
+                                  {card.statusLabel}:{' '}
+                                  <span style={{ color: card.iconColor }}>{card.statusValue}</span>
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Content grid */}
+                            <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10">
+                              <div className="flex flex-col gap-4 h-full">
+                                {card.activities.map((activity, i) => (
+                                  <div
+                                    key={i}
+                                    className="group/activity flex-1 flex items-center justify-between px-6 rounded-[24px] bg-white/5 border border-white/5 hover:bg-white/10 transition-colors cursor-pointer min-h-0"
+                                  >
+                                    <div className="flex items-center gap-6">
+                                      <div style={{ color: card.iconColor }} className="font-mono text-xs lg:text-sm">0{i + 1}</div>
+                                      <div className="text-lg lg:text-xl text-white font-medium">{activity}</div>
+                                    </div>
+                                    <ChevronRight className="w-5 h-5 text-gray-600 group-hover/activity:text-white group-hover/activity:translate-x-1 transition-[color,transform] duration-300" />
+                                  </div>
+                                ))}
+                                <a
+                                  href={card.href}
+                                  onClick={e => e.stopPropagation()}
+                                  className="group/add flex-1 rounded-[24px] border-2 border-dashed border-white/10 flex items-center justify-center gap-3 text-gray-500 hover:text-white hover:border-white/30 transition-colors duration-300 text-base lg:text-lg font-medium min-h-0 no-underline"
+                                >
+                                  <Plus className="w-5 h-5 group-hover/add:rotate-90 transition-transform duration-300" />
+                                  Open {card.label}
+                                </a>
+                              </div>
+                              <div className="bg-white/5 rounded-[32px] p-8 border border-white/5 h-full flex flex-col items-center justify-center">
+                                <div className="text-center">
+                                  <div className="text-gray-600 text-xs lg:text-sm uppercase tracking-[0.4em] mb-4">{card.statusLabel}</div>
+                                  <div className="text-4xl lg:text-6xl font-serif leading-none mb-2" style={{ color: card.iconColor }}>{card.statusValue}</div>
+                                  <div className="text-gray-600 text-xs uppercase tracking-widest mt-4">Current</div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    </div>
+                  )
+                })}
+                </div>
+
+                {/* Studio mode — app list, slides in from top.
+                    Top padding accounts for the chrome header panels that float above.
+                    Mouse move forwarded to studioMouseRef for magnetic dot effect on the stack background. */}
+                {/* Studio mode — slides in from top */}
+                <div
+                  onMouseMove={(e) => { studioMouseRef.current = { x: e.clientX, y: e.clientY } }}
+                  onMouseLeave={() => { studioMouseRef.current = { x: -1000, y: -1000 } }}
+                  style={{
+                    position: 'absolute', inset: 0, overflow: 'auto',
+                    transform: mode === 'studio' ? 'translateY(0) scale(1)' : mode === 'builder' ? 'translateY(0) scale(0.95)' : 'translateY(-100%) scale(1)',
+                    opacity: mode === 'studio' || builderAnim !== 'idle' ? 1 : 0,
+                    transition: 'transform 600ms cubic-bezier(0.4, 0, 0.2, 1), opacity 400ms cubic-bezier(0.4, 0, 0.2, 1), padding 600ms cubic-bezier(0.4,0,0.2,1)',
+                    pointerEvents: mode === 'studio' || builderAnim !== 'idle' ? 'auto' : 'none',
+                    display: 'flex', flexDirection: 'column',
+                    alignItems: builderAnim === 'idle' || builderAnim === 'locked' ? 'center' : 'stretch',
+                    justifyContent: builderAnim === 'idle' || builderAnim === 'locked' ? 'center' : 'stretch',
+                    padding: builderAnim === 'idle' || builderAnim === 'locked' ? `${CHROME_HEADER_HEIGHT_PX + 12}px 16px 16px` : 0,
+                  }}
+                >
+                  {/* Create New App card — expands in place to fill the stack.
+                      Idle: small centered card. Expanding: width/height transition to 100%.
+                      StudioClient content lives inside, hidden until expanded. */}
+                  <div
+                    ref={createCardRef}
+                    onClick={() => { if (builderAnim === 'idle') setBuilderAnim("locked") }}
+                    style={{
+                      position: 'relative',
+                      overflow: 'hidden',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      color: '#60a5fa',
+                      cursor: builderAnim === 'idle' ? 'pointer' : 'default',
+                      // Idle/locked: small fixed-size card. Expanding/open: fills parent.
+                      ...(builderAnim === 'idle' || builderAnim === 'locked' ? {
+                        width: 320, height: 240,
+                        borderRadius: 20,
+                        background: 'rgba(96,165,250,0.06)',
+                        borderWidth: 2, borderStyle: 'dashed' as const, borderColor: 'rgba(96,165,250,0.25)',
+                      } : {
+                        flex: 1,
+                        borderRadius: 0,
+                        background: 'transparent',
+                        borderWidth: 0, borderStyle: 'dashed' as const, borderColor: 'transparent',
+                      }),
+                      gap: 12,
+                      transition: builderAnim === 'expanding' || builderAnim === 'collapsing'
+                        ? 'flex 600ms cubic-bezier(0.4,0,0.2,1), border-radius 600ms cubic-bezier(0.4,0,0.2,1), background 600ms ease, border-color 600ms ease'
+                        : 'none',
+                    }}
+                  >
+                    {/* Card face — plus icon + label, fades out as card grows */}
+                    <div style={{
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12,
+                      opacity: builderAnim === 'idle' || builderAnim === 'locked' ? 1 : 0,
+                      transition: 'opacity 800ms ease',
+                      pointerEvents: 'none',
+                      ...(builderAnim !== 'idle' && builderAnim !== 'locked' ? { position: 'absolute', inset: 0, zIndex: 1 } : {}),
+                    }}>
+                      <div style={{
+                        width: 52, height: 52, borderRadius: 16,
+                        background: 'rgba(96,165,250,0.12)', border: '1px solid rgba(96,165,250,0.2)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        <Plus size={24} />
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <span style={{ fontSize: 15, fontWeight: 700, display: 'block' }}>Create New App</span>
+                        <span style={{ fontSize: 11, color: 'rgba(96,165,250,0.6)', marginTop: 4, display: 'block' }}>Describe it in plain English</span>
+                      </div>
+                    </div>
+
+                    {/* Builder content — fills the card, fades in after it's grown */}
+                    {builderAnim !== 'idle' && builderAnim !== 'locked' && (
+                      <div style={{
+                        position: 'absolute', inset: 0, zIndex: 2,
+                        display: 'flex', flexDirection: 'column',
+                        overflow: 'hidden',
+                        opacity: builderAnim === 'open' ? 1 : 0,
+                        transition: 'opacity 600ms ease',
+                      }}>
+                        <StudioClient onBack={() => {
+                          setBuilderAnim("collapsing")
+                        }} />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* TODO: Prototype grid goes here when prototypes exist */}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     )
@@ -1073,6 +1629,53 @@ export function DashboardClient({
     <>
       <style>{`
         @keyframes gradFlow { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
+        /* Builder expand — two-phase: width first (33%), then height (67%).
+           Shadows morph from inset (pressed) to outset (elevated) to deep (landed).
+           Per animations.md panel expand rules. */
+        /* Builder expand uses CSS vars --bx, --by, --bw, --bh set from JS
+           to start at the card's exact screen position, then grow to fill viewport. */
+        @keyframes builderExpand {
+          0% {
+            top: var(--by); left: var(--bx); width: var(--bw); height: var(--bh);
+            border-radius: 20px;
+            box-shadow: inset 6px 6px 12px rgba(0,0,0,0.3), inset -4px -4px 8px rgba(96,165,250,0.1);
+          }
+          15% {
+            top: var(--by); left: var(--bx); width: var(--bw); height: var(--bh);
+            border-radius: 18px;
+            box-shadow: 8px 8px 24px rgba(96,165,250,0.15);
+          }
+          45% {
+            top: 0; left: 0; width: 100vw; height: var(--bh);
+            border-radius: 14px;
+            box-shadow: 12px 12px 32px rgba(96,165,250,0.12);
+          }
+          100% {
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            border-radius: 0px;
+            box-shadow: none;
+          }
+        }
+        @keyframes builderCollapse {
+          0%   { top: 0; left: 0; width: 100vw; height: 100vh; border-radius: 0; opacity: 1; }
+          40%  { top: 0; left: 0; width: 100vw; height: var(--bh); border-radius: 14px; opacity: 0.8; }
+          70%  { top: var(--by); left: var(--bx); width: var(--bw); height: var(--bh); border-radius: 18px; opacity: 0.4; }
+          100% { top: var(--by); left: var(--bx); width: var(--bw); height: var(--bh); border-radius: 20px; opacity: 0; }
+        }
+        @keyframes builderContentIn {
+          0%, 65% { opacity: 0; transform: translateY(8px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes builderFaceOut {
+          0% { opacity: 1; }
+          30% { opacity: 0; }
+          100% { opacity: 0; }
+        }
+        @keyframes builderFaceIn {
+          0% { opacity: 0; }
+          70% { opacity: 0; }
+          100% { opacity: 1; }
+        }
 
         @keyframes graphDrift {
           0%, 100% { transform: translate(0, 0); }
@@ -1180,6 +1783,87 @@ export function DashboardClient({
         </div>
       </div>
 
+      {/* ── Fixed Lab trigger — right edge, shimmer border ── */}
+      <style>{`
+        @property --lab-angle {
+          syntax: '<angle>';
+          initial-value: 0deg;
+          inherits: false;
+        }
+        @keyframes labShimmer { to { --lab-angle: 360deg; } }
+        @keyframes labBtnIn {
+          from { opacity: 0; transform: translateX(52px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+        .lab-shimmer-wrap {
+          animation: labShimmer 2.64s linear infinite;
+          background: conic-gradient(
+            from var(--lab-angle) at 50% 50%,
+            transparent 0%,
+            transparent 52%,
+            rgba(147,197,253,0.0) 60%,
+            rgba(147,197,253,0.9) 68%,
+            rgba(196,181,253,1.0) 72%,
+            rgba(147,197,253,0.9) 76%,
+            rgba(147,197,253,0.0) 84%,
+            transparent 100%
+          );
+        }
+      `}</style>
+      <div
+        className="lab-shimmer-wrap"
+        style={{
+          position: 'fixed', right: 0, bottom: '12%',
+          zIndex: 198, borderRadius: '12px 0 0 12px',
+          padding: '1px 0 1px 1px',
+          opacity: labOpen ? 0 : 1,
+          pointerEvents: labOpen ? 'none' : 'auto',
+        }}
+      >
+        <button
+          key={btnKey}
+          onClick={() => setLabOpen(o => !o)}
+          title="Glass Lab"
+          style={{
+            width: 44, height: 110,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 7,
+            borderRadius: '11px 0 0 11px',
+            background: 'rgba(9,9,19,0.88)',
+            backdropFilter: 'blur(14px)',
+            border: 'none', cursor: 'pointer',
+            animation: 'labBtnIn 540ms cubic-bezier(0.22,1,0.36,1) both',
+          }}
+        >
+          <FlaskConical size={16} color='rgba(255,255,255,0.45)' />
+          <span style={{
+            fontSize: 8, fontWeight: 800, letterSpacing: '0.14em',
+            color: 'rgba(255,255,255,0.35)',
+            writingMode: 'vertical-rl', transform: 'rotate(180deg)',
+            textTransform: 'uppercase', userSelect: 'none',
+          }}>LAB</span>
+        </button>
+      </div>
+
+      {/* ── Glass Laboratory panel ── */}
+      {labOpen && (
+        <GlassLabPanel
+          params={glassParams}
+          onChange={(newParams) => {
+            // In studio/builder mode, save bg type changes to the ref but keep "graph" active
+            if (mode !== 'home' && newParams.backgroundType !== 'graph') {
+              userBgTypeRef.current = newParams.backgroundType
+              setGlassParams({ ...newParams, backgroundType: 'graph' })
+            } else {
+              setGlassParams(newParams)
+            }
+          }}
+          onClose={() => setLabOpen(false)}
+          profiles={order.map(id => {
+            const p = profiles.find(x => x.id === id)
+            return p ? { id: p.id, name: p.name } : null
+          }).filter((p): p is { id: string; name: string } => p !== null)}
+        />
+      )}
     </>
   )
 }
