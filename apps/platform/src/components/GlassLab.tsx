@@ -83,7 +83,7 @@ export type GlassParams = {
 }
 
 export const DEFAULT_GLASS: GlassParams = {
-  engine: ENGINE.LINEAR,
+  engine: ENGINE.OFF,
   blur: 6,
   refraction: 0.10,
   opacity: 0.08,
