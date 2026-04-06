@@ -4,9 +4,12 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import {
   ArrowUpRight, Home, Wallet, Baby, CalendarDays,
   Hexagon, Users, X, Plus, ChevronRight, LogOut, UserRound, FlaskConical, Wand2,
+  Leaf, BarChart2, BookOpen, PenLine,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useUser, useClerk } from '@clerk/nextjs'
+import { useQuery } from 'convex/react'
+import { api } from '../../convex/_generated/api'
 import { GlassFilterSvg, GlassLabPanel, glassBackdropFilter, DEFAULT_GLASS } from './GlassLab'
 import { StudioPanel } from './StudioPanel'
 import type { GlassParams } from './GlassLab'
@@ -437,6 +440,33 @@ export function DashboardClient({
   useEffect(() => { glassParamsRef.current = glassParams }, [glassParams])
   const [labOpen, setLabOpen] = useState(false)
   const [mode, setMode] = useState<"home" | "studio" | "builder">("home")
+  const savedPrototypes = useQuery(api.features.studio.queries.listSaved) ?? []
+
+  const MOCK_PROTOTYPES = [
+    { id: 'mock-1', label: 'Garden Monitor',  iconColor: '#4ade80', glassTint: 'rgba(74,222,128,0.07)',  icon: Leaf,         href: '/studio', updatedAt: Date.now() - 2 * 86_400_000 },
+    { id: 'mock-2', label: 'Habit Tracker',   iconColor: '#a78bfa', glassTint: 'rgba(167,139,250,0.07)', icon: BarChart2,    href: '/studio', updatedAt: Date.now() - 5 * 86_400_000 },
+    { id: 'mock-3', label: 'Recipe Box',      iconColor: '#fb923c', glassTint: 'rgba(251,146,60,0.07)',  icon: BookOpen,     href: '/studio', updatedAt: Date.now() - 1 * 86_400_000 },
+    { id: 'mock-4', label: 'Fitness Log',     iconColor: '#f472b6', glassTint: 'rgba(244,114,182,0.07)', icon: Wand2,        href: '/studio', updatedAt: Date.now() - 12 * 3_600_000 },
+    { id: 'mock-5', label: 'Daily Journal',   iconColor: '#fbbf24', glassTint: 'rgba(251,191,36,0.07)',  icon: PenLine,      href: '/studio', updatedAt: Date.now() - 3 * 86_400_000 },
+    { id: 'mock-6', label: 'Lab Notes',       iconColor: '#38bdf8', glassTint: 'rgba(56,189,248,0.07)',  icon: FlaskConical, href: '/studio', updatedAt: Date.now() - 7 * 86_400_000 },
+  ].map(m => ({ ...m, statusLabel: 'Prototype', statusValue: '', kind: 'prototype' as const }))
+
+  const studioApps = [
+    ...BENTO_CARDS.map(c => ({ ...c, kind: 'platform' as const })),
+    ...MOCK_PROTOTYPES,
+    ...savedPrototypes.map(p => ({
+      id: p._id ?? '',
+      label: p.name,
+      iconColor: '#60a5fa',
+      glassTint: 'rgba(96,165,250,0.09)',
+      icon: Wand2,
+      href: `/studio/${p._id}`,
+      statusLabel: 'Prototype',
+      statusValue: '',
+      kind: 'prototype' as const,
+      updatedAt: p.updatedAt,
+    })),
+  ]
   const userBgTypeRef = useRef(glassParams.backgroundType)  // saves user's bg choice before studio swaps to graph
 
   // Keep userBgTypeRef updated when the user changes bg via Lab (but not when studio auto-sets to graph)
@@ -1508,7 +1538,7 @@ export function DashboardClient({
           {/* Studio mode — direct child of active view div (no padding inheritance) */}
           {isFrontCard && (
             <StudioPanel
-              apps={BENTO_CARDS}
+              apps={studioApps}
               visible={mode === 'studio'}
               topOffset={CHROME_HEADER_HEIGHT_PX}
               onMouseMove={(e) => { studioMouseRef.current = { x: e.clientX, y: e.clientY } }}

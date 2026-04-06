@@ -196,7 +196,7 @@ export function StudioListClient(): React.ReactElement {
           <div>
             <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0, letterSpacing: "-0.02em" }}>AI Studio</h1>
             <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", margin: "2px 0 0", fontWeight: 500 }}>
-              Build apps from plain English
+              Build the apps in your dashboard
             </p>
           </div>
         </div>
