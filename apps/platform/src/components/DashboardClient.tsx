@@ -3,13 +3,11 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import {
   ArrowUpRight, Home, Wallet, Baby, CalendarDays,
-  Hexagon, Users, X, Plus, ChevronRight, LogOut, UserRound, FlaskConical, Wand2,
-  Leaf, BarChart2, BookOpen, PenLine,
+  Hexagon, Users, X, Plus, ChevronRight, LogOut, UserRound,
+  Wand2, FlaskConical,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useUser, useClerk } from '@clerk/nextjs'
-import { useQuery } from 'convex/react'
-import { api } from '../../convex/_generated/api'
 import { GlassFilterSvg, GlassLabPanel, glassBackdropFilter, DEFAULT_GLASS } from './GlassLab'
 import { StudioPanel } from './StudioPanel'
 import type { GlassParams } from './GlassLab'
@@ -439,34 +437,7 @@ export function DashboardClient({
   const glassParamsRef = useRef(glassParams)
   useEffect(() => { glassParamsRef.current = glassParams }, [glassParams])
   const [labOpen, setLabOpen] = useState(false)
-  const [mode, setMode] = useState<"home" | "studio" | "builder">("home")
-  const savedPrototypes = useQuery(api.features.studio.queries.listSaved) ?? []
-
-  const MOCK_PROTOTYPES = [
-    { id: 'mock-1', label: 'Garden Monitor',  iconColor: '#4ade80', glassTint: 'rgba(74,222,128,0.07)',  icon: Leaf,         href: '/studio', updatedAt: Date.now() - 2 * 86_400_000 },
-    { id: 'mock-2', label: 'Habit Tracker',   iconColor: '#a78bfa', glassTint: 'rgba(167,139,250,0.07)', icon: BarChart2,    href: '/studio', updatedAt: Date.now() - 5 * 86_400_000 },
-    { id: 'mock-3', label: 'Recipe Box',      iconColor: '#fb923c', glassTint: 'rgba(251,146,60,0.07)',  icon: BookOpen,     href: '/studio', updatedAt: Date.now() - 1 * 86_400_000 },
-    { id: 'mock-4', label: 'Fitness Log',     iconColor: '#f472b6', glassTint: 'rgba(244,114,182,0.07)', icon: Wand2,        href: '/studio', updatedAt: Date.now() - 12 * 3_600_000 },
-    { id: 'mock-5', label: 'Daily Journal',   iconColor: '#fbbf24', glassTint: 'rgba(251,191,36,0.07)',  icon: PenLine,      href: '/studio', updatedAt: Date.now() - 3 * 86_400_000 },
-    { id: 'mock-6', label: 'Lab Notes',       iconColor: '#38bdf8', glassTint: 'rgba(56,189,248,0.07)',  icon: FlaskConical, href: '/studio', updatedAt: Date.now() - 7 * 86_400_000 },
-  ].map(m => ({ ...m, statusLabel: 'Prototype', statusValue: '', kind: 'prototype' as const }))
-
-  const studioApps = [
-    ...BENTO_CARDS.map(c => ({ ...c, kind: 'platform' as const })),
-    ...MOCK_PROTOTYPES,
-    ...savedPrototypes.map(p => ({
-      id: p._id ?? '',
-      label: p.name,
-      iconColor: '#60a5fa',
-      glassTint: 'rgba(96,165,250,0.09)',
-      icon: Wand2,
-      href: `/studio/${p._id}`,
-      statusLabel: 'Prototype',
-      statusValue: '',
-      kind: 'prototype' as const,
-      updatedAt: p.updatedAt,
-    })),
-  ]
+  const [mode, setMode] = useState<"home" | "studio">("home")
   const userBgTypeRef = useRef(glassParams.backgroundType)  // saves user's bg choice before studio swaps to graph
 
   // Keep userBgTypeRef updated when the user changes bg via Lab (but not when studio auto-sets to graph)
@@ -501,7 +472,7 @@ export function DashboardClient({
 
   // ── Studio graph canvas magnetic dot effect ────────────────────────────────
   useEffect(() => {
-    if (mode !== 'studio' && mode !== 'builder') return
+    if (mode !== 'studio') return
     const canvas = studioCanvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
@@ -1597,7 +1568,6 @@ export function DashboardClient({
           {/* Studio mode — direct child of active view div (no padding inheritance) */}
           {isFrontCard && (
             <StudioPanel
-              apps={studioApps}
               visible={mode === 'studio'}
               topOffset={CHROME_HEADER_HEIGHT_PX}
               onMouseMove={(e) => { studioMouseRef.current = { x: e.clientX, y: e.clientY } }}
@@ -1615,54 +1585,6 @@ export function DashboardClient({
     <>
       <style>{`
         @keyframes gradFlow { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
-        /* Builder expand — two-phase: width first (33%), then height (67%).
-           Shadows morph from inset (pressed) to outset (elevated) to deep (landed).
-           Per animations.md panel expand rules. */
-        /* Builder expand uses CSS vars --bx, --by, --bw, --bh set from JS
-           to start at the card's exact screen position, then grow to fill viewport. */
-        @keyframes builderExpand {
-          0% {
-            top: var(--by); left: var(--bx); width: var(--bw); height: var(--bh);
-            border-radius: 20px;
-            box-shadow: inset 6px 6px 12px rgba(0,0,0,0.3), inset -4px -4px 8px rgba(96,165,250,0.1);
-          }
-          15% {
-            top: var(--by); left: var(--bx); width: var(--bw); height: var(--bh);
-            border-radius: 18px;
-            box-shadow: 8px 8px 24px rgba(96,165,250,0.15);
-          }
-          45% {
-            top: 0; left: 0; width: 100vw; height: var(--bh);
-            border-radius: 14px;
-            box-shadow: 12px 12px 32px rgba(96,165,250,0.12);
-          }
-          100% {
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            border-radius: 0px;
-            box-shadow: none;
-          }
-        }
-        @keyframes builderCollapse {
-          0%   { top: 0; left: 0; width: 100vw; height: 100vh; border-radius: 0; opacity: 1; }
-          40%  { top: 0; left: 0; width: 100vw; height: var(--bh); border-radius: 14px; opacity: 0.8; }
-          70%  { top: var(--by); left: var(--bx); width: var(--bw); height: var(--bh); border-radius: 18px; opacity: 0.4; }
-          100% { top: var(--by); left: var(--bx); width: var(--bw); height: var(--bh); border-radius: 20px; opacity: 0; }
-        }
-        @keyframes builderContentIn {
-          0%, 65% { opacity: 0; transform: translateY(8px); }
-          100% { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes builderFaceOut {
-          0% { opacity: 1; }
-          30% { opacity: 0; }
-          100% { opacity: 0; }
-        }
-        @keyframes builderFaceIn {
-          0% { opacity: 0; }
-          70% { opacity: 0; }
-          100% { opacity: 1; }
-        }
-
         @keyframes graphDrift {
           0%, 100% { transform: translate(0, 0); }
           25% { transform: translate(-8px, 5px); }

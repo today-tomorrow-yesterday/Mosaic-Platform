@@ -24,7 +24,6 @@ type KanbanCard = {
 }
 
 type StudioPanelProps = {
-  apps?: unknown[]
   visible: boolean
   topOffset: number
   onMouseMove?: (e: React.MouseEvent) => void
