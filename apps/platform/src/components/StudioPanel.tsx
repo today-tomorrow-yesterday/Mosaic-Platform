@@ -429,16 +429,17 @@ function DraftCard({ card }: { card: KanbanCard }) {
   )
 }
 
-function PrototypeCard({ card }: { card: KanbanCard }) {
+function PrototypeCard({ card, phaseAccent }: { card: KanbanCard; phaseAccent: string }) {
   const IconComp = card.icon
+  const accent = phaseAccent
   return (
     <a
       href={card.href ?? '#'}
       className="kanban-card"
       style={{
         display: 'block',
-        background: `linear-gradient(135deg, ${card.accentColor}12 0%, rgba(255,255,255,0.03) 70%)`,
-        border: `1px solid ${card.accentColor}28`,
+        background: `linear-gradient(135deg, ${accent}12 0%, rgba(255,255,255,0.03) 70%)`,
+        border: `1px solid ${accent}28`,
         borderRadius: 14,
         padding: '14px 16px',
         textDecoration: 'none',
@@ -449,23 +450,23 @@ function PrototypeCard({ card }: { card: KanbanCard }) {
       {/* Top edge glow */}
       <div style={{
         position: 'absolute', top: 0, left: '15%', right: '15%', height: 1,
-        background: `linear-gradient(90deg, transparent, ${card.accentColor}55, transparent)`,
+        background: `linear-gradient(90deg, transparent, ${accent}55, transparent)`,
       }} />
 
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8 }}>
         {IconComp && (
           <div style={{
             width: 28, height: 28, borderRadius: 8,
-            background: `${card.accentColor}20`, border: `1px solid ${card.accentColor}35`,
+            background: `${accent}20`, border: `1px solid ${accent}35`,
             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
           }}>
-            <IconComp size={13} color={card.accentColor} />
+            <IconComp size={13} color={accent} />
           </div>
         )}
         <span style={{
           fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
-          color: card.accentColor,
-          background: `${card.accentColor}18`, border: `1px solid ${card.accentColor}35`,
+          color: accent,
+          background: `${accent}18`, border: `1px solid ${accent}35`,
           padding: '3px 8px', borderRadius: 100,
         }}>
           Prototype
@@ -491,7 +492,7 @@ function PrototypeCard({ card }: { card: KanbanCard }) {
         <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.02em' }}>
           {relativeTime(card.updatedAt)}
         </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: card.accentColor, fontSize: 11, fontWeight: 600 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: accent, fontSize: 11, fontWeight: 600 }}>
           Open <ArrowUpRight size={11} />
         </div>
       </div>
@@ -499,8 +500,9 @@ function PrototypeCard({ card }: { card: KanbanCard }) {
   )
 }
 
-function LiveCard({ card }: { card: KanbanCard }) {
+function LiveCard({ card, phaseAccent }: { card: KanbanCard; phaseAccent: string }) {
   const IconComp = card.icon
+  const accent = phaseAccent
   return (
     <a
       href={card.href ?? '#'}
@@ -509,8 +511,8 @@ function LiveCard({ card }: { card: KanbanCard }) {
       className="kanban-card"
       style={{
         display: 'block',
-        background: `linear-gradient(135deg, ${card.accentColor}14 0%, rgba(255,255,255,0.03) 65%)`,
-        border: `1px solid ${card.accentColor}35`,
+        background: `linear-gradient(135deg, ${accent}14 0%, rgba(255,255,255,0.03) 65%)`,
+        border: `1px solid ${accent}35`,
         borderRadius: 14,
         padding: '14px 16px',
         textDecoration: 'none',
@@ -522,10 +524,10 @@ function LiveCard({ card }: { card: KanbanCard }) {
         {IconComp && (
           <div style={{
             width: 28, height: 28, borderRadius: 8,
-            background: `${card.accentColor}22`, border: `1px solid ${card.accentColor}40`,
+            background: `${accent}22`, border: `1px solid ${accent}40`,
             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
           }}>
-            <IconComp size={13} color={card.accentColor} />
+            <IconComp size={13} color={accent} />
           </div>
         )}
         <div>
@@ -538,7 +540,7 @@ function LiveCard({ card }: { card: KanbanCard }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4 }}>
             <span style={{
               width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
-              background: '#4ade80', boxShadow: '0 0 6px rgba(74,222,128,0.7)',
+              background: accent, boxShadow: `0 0 6px ${accent}b3`,
               display: 'inline-block',
             }} />
             <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.04em' }}>
@@ -549,10 +551,10 @@ function LiveCard({ card }: { card: KanbanCard }) {
         <div style={{
           marginLeft: 'auto',
           width: 24, height: 24, borderRadius: '50%',
-          background: `${card.accentColor}15`, border: `1px solid ${card.accentColor}30`,
+          background: `${accent}15`, border: `1px solid ${accent}30`,
           display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
         }}>
-          <ArrowUpRight size={11} color={card.accentColor} style={{ opacity: 0.8 }} />
+          <ArrowUpRight size={11} color={accent} style={{ opacity: 0.8 }} />
         </div>
       </div>
       <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', lineHeight: 1.45 }}>
@@ -569,7 +571,7 @@ function LiveCard({ card }: { card: KanbanCard }) {
         </span>
         <div style={{
           display: 'flex', alignItems: 'center', gap: 4,
-          color: card.accentColor, fontSize: 11, fontWeight: 600,
+          color: accent, fontSize: 11, fontWeight: 600,
         }}>
           View <ArrowUpRight size={11} />
         </div>
@@ -648,8 +650,8 @@ function KanbanColumn({ phase, cards }: {
         {cards.map(card => {
           if (card.phase === 'spark')     return <SparkCard     key={card.id} card={card} />
           if (card.phase === 'draft')     return <DraftCard     key={card.id} card={card} />
-          if (card.phase === 'prototype') return <PrototypeCard key={card.id} card={card} />
-          if (card.phase === 'live')      return <LiveCard      key={card.id} card={card} />
+          if (card.phase === 'prototype') return <PrototypeCard key={card.id} card={card} phaseAccent={phase.accent} />
+          if (card.phase === 'live')      return <LiveCard      key={card.id} card={card} phaseAccent={phase.accent} />
           return null
         })}
       </div>
@@ -673,10 +675,12 @@ export function StudioPanel({ visible, topOffset, onMouseMove, onMouseLeave }: S
         overflow: 'hidden',
         background: 'transparent',
         transform: visible ? 'translateY(0)' : 'translateY(-110%)',
-        opacity: visible ? 1 : 0,
-        transition: 'transform 600ms cubic-bezier(0.4, 0, 0.2, 1), opacity 400ms cubic-bezier(0.4, 0, 0.2, 1)',
+        transition: visible
+          ? 'transform 700ms cubic-bezier(0.22, 1, 0.36, 1)'
+          : 'transform 500ms cubic-bezier(0.4, 0, 0.2, 1)',
         pointerEvents: visible ? 'auto' : 'none',
         zIndex: 35,
+        cursor: 'none',
       }}
     >
       {/* Kanban board */}

@@ -487,6 +487,9 @@ export function DashboardClient({
   const bentoGridRef = useRef<HTMLDivElement>(null)
   const studioCanvasRef = useRef<HTMLCanvasElement>(null)
   const studioMouseRef = useRef({ x: -1000, y: -1000 })
+  const cursorDotRef = useRef<HTMLDivElement>(null)
+  const cursorRingRef = useRef<HTMLDivElement>(null)
+  const cursorRingPos = useRef({ x: 0, y: 0 })
   const activeViewRef = useRef<HTMLDivElement>(null)
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const probeRefs = useRef<Record<string, HTMLDivElement | null>>({})
@@ -568,6 +571,61 @@ export function DashboardClient({
     draw()
 
     return () => { active = false; ro.disconnect() }
+  }, [mode])
+
+  // ── Studio custom cursor — dot snaps, ring lerps, hover/click effects ───────
+  useEffect(() => {
+    if (mode !== 'studio') return
+    const dot = cursorDotRef.current
+    const ring = cursorRingRef.current
+    if (!dot || !ring) return
+    let active = true
+    const rp = cursorRingPos.current
+
+    const onMove = (e: MouseEvent): void => {
+      dot.style.left = e.clientX + 'px'
+      dot.style.top = e.clientY + 'px'
+      const target = e.target as HTMLElement
+      const isHoverable = target.closest('button, a, [role="button"], .studio-box, .kanban-card, .spark-capture-idle, [data-clickable], [style*="cursor: pointer"], [style*="cursor:pointer"]')
+      if (isHoverable) {
+        dot.classList.add('studio-cursor-hover')
+        ring.classList.add('studio-cursor-hover')
+      } else {
+        dot.classList.remove('studio-cursor-hover')
+        ring.classList.remove('studio-cursor-hover')
+      }
+    }
+    const onDown = (): void => {
+      dot.classList.add('studio-cursor-click')
+      ring.classList.add('studio-cursor-click')
+    }
+    const onUp = (): void => {
+      dot.classList.remove('studio-cursor-click')
+      ring.classList.remove('studio-cursor-click')
+    }
+
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('mouseup', onUp)
+
+    const lerp = (): void => {
+      if (!active) return
+      const mx = parseFloat(dot.style.left) || 0
+      const my = parseFloat(dot.style.top) || 0
+      rp.x += (mx - rp.x) * 0.14
+      rp.y += (my - rp.y) * 0.14
+      ring.style.left = rp.x + 'px'
+      ring.style.top = rp.y + 'px'
+      requestAnimationFrame(lerp)
+    }
+    lerp()
+
+    return () => {
+      active = false
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('mouseup', onUp)
+    }
   }, [mode])
 
   // ── Proximity Hover Engine (spotlight falloff) ──────────────────────────────
@@ -1216,8 +1274,9 @@ export function DashboardClient({
                     position: 'absolute', inset: 0,
                     overflow: 'visible', perspective: 1000,
                     transform: mode === 'home' ? 'translateY(0)' : 'translateY(100%)',
-                    opacity: mode === 'home' ? 1 : 0,
-                    transition: expand ? 'none' : 'transform 600ms cubic-bezier(0.4, 0, 0.2, 1), opacity 400ms cubic-bezier(0.4, 0, 0.2, 1)',
+                    transition: expand ? 'none' : mode === 'home'
+                      ? 'transform 700ms cubic-bezier(0.22, 1, 0.36, 1)'
+                      : 'transform 500ms cubic-bezier(0.4, 0, 0.2, 1)',
                     pointerEvents: mode === 'home' ? 'auto' : 'none',
                   }}
                 >
@@ -1790,6 +1849,13 @@ export function DashboardClient({
             return p ? { id: p.id, name: p.name } : null
           }).filter((p): p is { id: string; name: string } => p !== null)}
         />
+      )}
+      {/* Studio custom cursor — outside all transformed containers */}
+      {mode === 'studio' && (
+        <>
+          <div ref={cursorDotRef} className="studio-cursor-dot" />
+          <div ref={cursorRingRef} className="studio-cursor-ring" />
+        </>
       )}
     </>
   )
