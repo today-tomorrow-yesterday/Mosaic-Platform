@@ -6,8 +6,12 @@ on:
   push:
     branches: [main]
 
+env:
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+
 jobs:
-  ci:
+  check:
     name: Typecheck & Lint
     runs-on: ubuntu-latest
 
@@ -26,8 +30,56 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Typecheck
-        run: pnpm typecheck
+      - name: Typecheck & Lint
+        run: pnpm turbo typecheck lint
 
-      - name: Lint
-        run: pnpm lint
+  deploy-convex:
+    name: Deploy Convex Backends
+    runs-on: ubuntu-latest
+    needs: [check]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Deploy Convex — platform
+        working-directory: apps/platform
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.PLATFORM_CONVEX_DEPLOY_KEY }}
+        run: npx convex deploy
+
+      - name: Deploy Convex — budget
+        working-directory: apps/budget
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.BUDGET_CONVEX_DEPLOY_KEY }}
+        run: npx convex deploy
+
+      - name: Deploy Convex — calendar
+        working-directory: apps/calendar
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CALENDAR_CONVEX_DEPLOY_KEY }}
+        run: npx convex deploy
+
+      - name: Deploy Convex — home
+        working-directory: apps/home
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.HOME_CONVEX_DEPLOY_KEY }}
+        run: npx convex deploy
+
+      - name: Deploy Convex — baby-tracker
+        working-directory: apps/baby-tracker
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.BABY_CONVEX_DEPLOY_KEY }}
+        run: npx convex deploy
